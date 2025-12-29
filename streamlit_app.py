@@ -1,91 +1,91 @@
 import streamlit as st
 import time
+import pandas as pd # Für das professionelle Logbuch
 
 # --- SYSTEM KONFIGURATION ---
 st.set_page_config(
-    page_title="SilasGuardian Pro", 
+    page_title="SilasGuardian Pro | CORE", 
     page_icon="🛡️", 
-    layout="wide", # Auf Wide gestellt für bessere Übersicht auf dem iPad
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Zugangsdaten
+# --- VERSCHLÜSSELTE DATENBANK (Beispiel) ---
+# In einem echten System wären diese Werte nochmals gehasht.
 MASTER_KEY = "silas"
 SEKTOR_PWS = {
     "Sektor 3: Zentral-Datenbank": "data",
     "Sektor 4: Netzwerk-Knoten": "strike",
-    "Sektor 5: Firewall-Mainframe": "scan"
+    "Sektor 5: Sicherheits-Überwachung": "scan"
 }
 
-# --- SESSION STATE (Speichert den Login-Status) ---
+# --- INITIALISIERUNG DES LOGS ---
+if 'security_logs' not in st.session_state:
+    st.session_state.security_logs = [
+        {"Zeit": time.strftime("%H:%M:%S"), "Ereignis": "System-Kern gestartet", "Status": "OK"}
+    ]
+
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
-# --- LOGIN BEREICH ---
+# --- LOGIN LOGIK ---
 if not st.session_state.authenticated:
-    st.title("🛡️ SilasGuardian Pro | Terminal Login")
-    user_input = st.text_input("MASTER-KEY", type="password")
-    if st.button("LOGIN"):
+    st.title("🔐 SilasGuardian CORE | Authentifizierung")
+    user_input = st.text_input("Geben Sie den Master-Key ein", type="password")
+    
+    if st.button("System entsperren"):
         if user_input == MASTER_KEY:
             st.session_state.authenticated = True
+            st.session_state.security_logs.append(
+                {"Zeit": time.strftime("%H:%M:%S"), "Ereignis": "Master-Login erfolgreich", "Status": "AUTH"}
+            )
             st.rerun()
         else:
-            st.error("ZUGRIFF VERWEIGERT")
+            st.session_state.security_logs.append(
+                {"Zeit": time.strftime("%H:%M:%S"), "Ereignis": "Fehlgeschlagener Login-Versuch", "Status": "WARNUNG"}
+            )
+            st.error("ZUGRIFF VERWEIGERT - Protokoll erstellt.")
 
-# --- HAUPTSYSTEM ---
+# --- GESICHERTE BENUTZEROBERFLÄCHE ---
 else:
-    st.sidebar.title("🛡️ Kontrollzentrum")
-    menu = st.sidebar.radio("Navigation", ["System-Status", "Sektor-Zugriff", "Sicherheits-Log", "Notfall-Lockdown"])
+    st.sidebar.title("🛡️ Core Control")
+    menu = st.sidebar.radio("Sicherheits-Ebenen", ["Dashboard", "Sektor-Terminal", "Intrusion Logs"])
 
-    if menu == "System-Status":
-        # DIE NEUE WILLKOMMENS-NACHRICHT (Fest eingebaut)
-        st.success(f"### ✅ Identität bestätigt: Willkommen zurück, Silas!")
-        st.write(f"System-Zeit: {time.strftime('%H:%M:%S')} | Status: Gesichert")
+    if menu == "Dashboard":
+        st.header("Willkommen zurück, Silas")
+        st.success("System-Integrität: 100% | Verschlüsselung: AES-256 aktiv")
         
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Netzwerk", "ONLINE")
-        col2.metric("Sektoren", "3 GEsichert")
-        col3.metric("CPU", "12%")
-        
-        st.info("**Hinweis:** Alle Sektoren sind im Standby. Zugriff über das Menü links anfordern.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info("Letzte Aktivität: " + st.session_state.security_logs[-1]["Zeit"])
+        with col2:
+            st.warning("Aktive Sektoren: 3")
 
-    elif menu == "Sektor-Zugriff":
-        st.title("Sektor-Kontrolle")
-        sektor = st.selectbox("Sektor wählen", list(SEKTOR_PWS.keys()))
-        pw = st.text_input(f"Passwort für {sektor}", type="password")
+    elif menu == "Sektor-Terminal":
+        st.subheader("Sektor-Verschlüsselung aufheben")
+        sektor = st.selectbox("Wählen Sie den Ziel-Sektor", list(SEKTOR_PWS.keys()))
+        pw = st.text_input("Sektor-Passwort", type="password")
         
-        if st.button("Zugriff anfordern"):
+        if st.button("Entschlüsseln"):
             if pw == SEKTOR_PWS[sektor]:
-                st.success(f"🔓 ZUGRIFF GEWÄHRT - {sektor}")
+                st.success(f"Daten für {sektor} freigegeben.")
                 
-                # INHALT FÜR SEKTOR 3
-                if sektor == "Sektor 3: Zentral-Datenbank":
-                    st.divider()
-                    st.subheader("📁 GEHEIME ARCHIV-DATEN")
-                    st.warning("Vertrauliche Informationen - Nur für Silas")
-                    st.write("1. **Projekt 'Alpha Strike'**: Aktiv")
-                    st.write("2. **Server-Standort**: Sektor 0 (Verschlüsselt)")
-                    st.write("3. **Letztes Backup**: Heute " + time.strftime("%H:%M"))
-                
-                # INHALT FÜR SEKTOR 4
-                elif sektor == "Sektor 4: Netzwerk-Knoten":
-                    st.divider()
-                    st.subheader("🌐 NETZWERK-ÜBERWACHUNG")
-                    st.write("Führe aktiven Scan durch...")
-                    st.progress(85)
-                    st.code("SCANNING... IP 192.168.1.1 [CLEAN]\nSCANNING... IP 10.0.0.5 [CLEAN]")
-
+                if sektor == "Sektor 5: Sicherheits-Überwachung":
+                    st.write("### 🚨 Firewall-Live-Daten")
+                    st.write("- Port 80/443: Überwacht")
+                    st.write("- Brute-Force-Schutz: Aktiv")
+                    st.write("- Bekannte Bedrohungen: 0")
             else:
-                st.error("❌ PASSWORT FALSCH - ZUGRIFF VERWEIGERT")
+                st.error("Ungültiges Sektor-Passwort!")
+                st.session_state.security_logs.append(
+                    {"Zeit": time.strftime("%H:%M:%S"), "Ereignis": f"Fehlzugriff {sektor}", "Status": "CRITICAL"}
+                )
 
-    elif menu == "Sicherheits-Log":
-        st.title("System-Protokoll")
-        st.code(f"[{time.strftime('%H:%M:%S')}] User 'Silas' logged in.\n[STATUS] Sektor-Abfrage bereit.")
-
-    elif menu == "Notfall-Lockdown":
-        if st.button("🚨 SYSTEM-LOCKDOWN AUSLÖSEN"):
-            st.session_state.authenticated = False
-            st.rerun()
+    elif menu == "Intrusion Logs":
+        st.header("🕵️ System-Protokolle (IDS)")
+        st.write("Dieses Logbuch zeichnet jede Bewegung im System auf.")
+        df = pd.DataFrame(st.session_state.security_logs)
+        st.table(df) # Hier siehst du jetzt eine echte Tabelle deiner Logins!
 
     if st.sidebar.button("Logout"):
         st.session_state.authenticated = False
