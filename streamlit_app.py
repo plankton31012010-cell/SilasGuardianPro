@@ -2,8 +2,7 @@ import streamlit as st
 import time
 
 # --- SYSTEM KONFIGURATION ---
-st.set_page_config(page_title="SilasGuardian Pro", page_icon="🛡️", layout="centered")
-
+st.set_page_config(page_title="SilasGuardian Pro", page_icon="🛡️", layout="centered", initial_sidebar_state="expanded")
 # Zugangsdaten
 MASTER_KEY = "silas"
 SEKTOR_PWS = {
