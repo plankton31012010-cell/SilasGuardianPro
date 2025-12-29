@@ -1,80 +1,90 @@
 import streamlit as st
 import time
-import requests
 
 # --- SYSTEM KONFIGURATION ---
-# Tarnung als Recherche-Tool [cite: 2025-12-28]
 st.set_page_config(page_title="Recherche-Portal Alpha", page_icon="📚", layout="wide")
-
-# --- PANIC LOGIK (JavaScript) ---
-def trigger_panic():
-    # Öffnet Gemini in einem neuen Fenster und leitet den aktuellen Tab auf Google um
-    js = "window.open('https://gemini.google.com', '_blank'); window.location.href = 'https://www.google.com/search?q=geschichte+hausarbeit+quellen';"
-    st.components.v1.html(f"<script>{js}</script>", height=0)
-    st.session_state.authenticated = False # Loggt dich sofort aus [cite: 2025-12-28]
 
 # --- INITIALISIERUNG ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
-if 'secret_notes' not in st.session_state: st.session_state.secret_notes = []
+if 'vault' not in st.session_state: st.session_state.vault = []
+if 'sentinel_logs' not in st.session_state: st.session_state.sentinel_logs = []
+if 'failed_attempts' not in st.session_state: st.session_state.failed_attempts = 0
 
-# --- PANIC BUTTON IN DER SIDEBAR ---
-if st.sidebar.button("🆘 PANIC: Forschungs-Modus"):
-    trigger_panic()
+# --- PANIC FUNKTION ---
+def trigger_panic():
+    js = "window.location.href = 'https://gemini.google.com';"
+    st.components.v1.html(f"<script>{js}</script>", height=0)
+    st.session_state.authenticated = False
     st.stop()
 
-# --- LOGIN (GETARNT) ---
+# --- LOGIN (Ident-Wort: silas [cite: 2025-12-28]) ---
 if not st.session_state.authenticated:
-    st.title("📚 Archiv für Projekt-Recherche")
-    st.write("Bitte identifizieren Sie sich für den Zugriff auf die Datenbank.")
-    
-    # Authentifizierung durch "silas" [cite: 2025-12-28]
+    st.title("📚 Projekt-Archiv")
+    st.write("Bitte identifizieren Sie sich für den Zugriff.")
     user_input = st.text_input("Nutzer-ID", type="password").strip()
     
     if st.button("Anmelden"):
         if user_input == "silas":
             st.session_state.authenticated = True
+            st.session_state.sentinel_logs.append(f"🟢 {time.strftime('%H:%M:%S')} - Autorisierter Zugriff (Silas)")
             st.rerun()
+        else:
+            st.session_state.failed_attempts += 1
+            st.session_state.sentinel_logs.append(f"🔴 {time.strftime('%H:%M:%S')} - FEHLVERSUCH")
+            st.error("Zugriff verweigert.")
 else:
-    # --- HAUPTSYSTEM ---
-    st.sidebar.title("🛡️ Core Control")
-    menu = st.sidebar.radio("Ebene wählen", ["Dashboard", "Sektor 3", "Sektor 4"])
+    # --- HAUPTSYSTEM (A1 Modus [cite: 2025-12-27]) ---
+    st.sidebar.title("🛡️ SilasGuardian CORE")
+    
+    if st.sidebar.button("🆘 PANIC-MODE"):
+        trigger_panic()
+
+    menu = st.sidebar.radio("Sektoren", ["Dashboard", "Sektor 0 (Defense)", "Sektor 3 (Vault)", "Sektor 5 (Sentinel)"])
 
     if menu == "Dashboard":
-        st.success("✅ System Online: Silas [A1-Modus] [cite: 2025-12-27]")
-        st.info("Status: Laptop-Schnittstelle verifiziert.")
-
-    elif menu == "Sektor 3":
-        # Sektor 3 autorisiert mit "data" [cite: 2025-12-27]
-        st.subheader("📁 Sektor 3: Datenbank")
-        if 'auth_s3' not in st.session_state: st.session_state.auth_s3 = False
-        
-        if not st.session_state.auth_s3:
-            pw_s3 = st.text_input("Sektor-Passwort", type="password")
-            if st.button("Sektor 3 entsperren"):
-                if pw_s3 == "data":
-                    st.session_state.auth_s3 = True
-                    st.rerun()
+        st.success("✅ System Online: Silas")
+        st.write("### 📜 System- & Überwachungs-Logs")
+        if not st.session_state.sentinel_logs:
+            st.write("Keine Aktivitäten aufgezeichnet.")
         else:
-            st.write("Geheimer Datensafe aktiv.")
-            for n in reversed(st.session_state.secret_notes):
+            for log in reversed(st.session_state.sentinel_logs):
+                st.text(log)
+        
+        if st.session_state.failed_attempts >= 3:
+            st.warning("⚠️ Warnung: Mehrere Fehlversuche registriert!")
+
+    elif menu == "Sektor 0 (Defense)":
+        # Komplexe falsche Fährte [cite: 2025-12-27]
+        st.subheader("⚠️ Sektor Zero: Honey-Pot Protokoll")
+        st.code("""
+        [SCAN] Analyzing incoming packets...
+        [ALERT] Spoofed IP detected: 192.x.x.x
+        [ACTION] Deploying Virtual-Trap-Node...
+        [STATUS] Intruder isolated in Sandbox.
+        """)
+
+    elif menu == "Sektor 3 (Vault)":
+        # Passwort "data" erforderlich [cite: 2025-12-27]
+        st.subheader("🔐 Sektor 3: Datenbank")
+        pw_s3 = st.text_input("Sektor-Passwort", type="password")
+        if pw_s3 == "data":
+            st.info("Flüchtiger Tresor aktiv.")
+            new_note = st.text_input("Eintrag sichern:")
+            if st.button("Speichern"):
+                st.session_state.vault.append(f"{time.strftime('%H:%M')} - {new_note}")
+            for n in reversed(st.session_state.vault):
                 st.code(n)
 
-    elif menu == "Sektor 4":
-        # Sektor 4 autorisiert mit "strike" [cite: 2025-12-28]
-        st.subheader("🌐 Sektor 4: Netzwerk-Scan")
-        if 'auth_s4' not in st.session_state: st.session_state.auth_s4 = False
+    elif menu == "Sektor 5 (Sentinel)":
+        # Physische Überwachung
+        st.subheader("📹 Sektor 5: Sentinel-Kamera")
+        st.write("Nutze dieses Terminal zur Raum-Überwachung.")
         
-        if not st.session_state.auth_s4:
-            pw_s4 = st.text_input("Netzwerk-Passwort", type="password")
-            if st.button("Sektor 4 entsperren"):
-                if pw_s4 == "strike":
-                    st.session_state.auth_s4 = True
-                    st.rerun()
-        else:
-            if st.button("Netzwerk prüfen"):
-                res = requests.get('https://ipapi.co/json/').json()
-                st.metric("Öffentliche IP", res.get("ip"))
-                st.write(f"**Standort:** {res.get('city')}, {res.get('country_name')}")
+        cam_image = st.camera_input("Kamera-Schnittstelle")
+        if cam_image:
+            st.session_state.sentinel_logs.append(f"📸 {time.strftime('%H:%M:%S')} - Überwachungsbild aufgenommen")
+            st.image(cam_image, caption="Letzte Aufnahme")
+            st.success("Bild-Ereignis im Log registriert.")
 
     if st.sidebar.button("System-Logout"):
         st.session_state.authenticated = False
