@@ -4,7 +4,7 @@ import pandas as pd
 
 # --- SYSTEM KONFIGURATION ---
 st.set_page_config(
-    page_title="SilasGuardian Pro | CORE v12.1", 
+    page_title="SilasGuardian Pro | CORE v12.2", 
     page_icon="🛡️", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -20,14 +20,14 @@ if 'failed_attempts' not in st.session_state:
 if 'lockout_time' not in st.session_state:
     st.session_state.lockout_time = 0
 
-# --- ABSOLUTE SPERR-LOGIK (Muss vor dem UI stehen) ---
+# --- ABSOLUTE SPERR-LOGIK ---
 current_time = time.time()
 if st.session_state.lockout_time > current_time:
     remaining = int(st.session_state.lockout_time - current_time)
-    st.error(f"🚨 SYSTEM-LOCKDOWN: Brute-Force Schutz aktiv. Zugriff gesperrt für {remaining}s.")
+    st.error(f"🚨 SYSTEM-LOCKDOWN: Zugriff gesperrt für {remaining}s.")
     time.sleep(1)
     st.rerun()
-    st.stop() # Verhindert das Laden der restlichen App
+    st.stop()
 
 # --- DATENBANK ---
 MASTER_KEY = "silas"
@@ -41,7 +41,8 @@ SEKTOR_PWS = {
 if not st.session_state.authenticated:
     st.title("🔐 SilasGuardian CORE | Login")
     
-    user_input = st.text_input("Master-Key eingeben", type="password")
+    # .strip() verhindert Fehler durch Leerzeichen beim Master-Key
+    user_input = st.text_input("Master-Key eingeben", type="password").strip()
     if st.button("System entsperren"):
         if user_input == MASTER_KEY:
             st.session_state.authenticated = True
@@ -51,12 +52,11 @@ if not st.session_state.authenticated:
         else:
             st.session_state.failed_attempts += 1
             st.session_state.security_logs.append({"Zeit": time.strftime("%H:%M:%S"), "Ereignis": f"Fehl-Login (Versuch {st.session_state.failed_attempts})", "Status": "WARNUNG"})
-            
             if st.session_state.failed_attempts >= 3:
-                st.session_state.lockout_time = time.time() + 60 # 60 Sekunden Sperre
+                st.session_state.lockout_time = time.time() + 60
                 st.rerun()
             else:
-                st.error(f"ZUGRIFF VERWEIGERT! Noch {3 - st.session_state.failed_attempts} Versuche bis zum Lockdown.")
+                st.error(f"ZUGRIFF VERWEIGERT! Noch {3 - st.session_state.failed_attempts} Versuche.")
 
 # --- HAUPTSYSTEM ---
 else:
@@ -65,36 +65,42 @@ else:
 
     if menu == "Dashboard":
         st.success("### ✅ System Online: Willkommen Silas")
-        st.write(f"Verschlüsselungsebene: **AES-256** | Status: **Scharf**")
-        st.info("Alle Versuche werden im Intrusion-Log protokolliert.")
+        st.write(f"Status: **Scharfgeschaltet** | Verschlüsselung: **Aktiv**")
+        st.info("Alle System-Zugriffe werden im IDS-Protokoll gespeichert.")
 
     elif menu == "Sektor-Terminal":
-        st.subheader("Sektor-Verschlüsselung")
-        sektor = st.selectbox("Sektor wählen", list(SEKTOR_PWS.keys()))
-        pw = st.text_input("Passwort", type="password")
+        st.subheader("Sektor-Verschlüsselung aufheben")
+        sektor_wahl = st.selectbox("Sektor wählen", list(SEKTOR_PWS.keys()))
+        
+        # .strip() bereinigt die Eingabe von unsichtbaren Leerzeichen
+        pw_input = st.text_input("Sektor-Passwort", type="password").strip()
         
         if st.button("Entschlüsseln"):
-            if pw == SEKTOR_PWS[sektor]:
-                st.success(f"🔓 {sektor} geöffnet")
+            # Vergleich der Eingabe mit dem hinterlegten Passwort
+            if pw_input == SEKTOR_PWS[sektor_wahl]:
+                st.success(f"🔓 Zugriff auf {sektor_wahl} gewährt.")
                 
-                if sektor == "Sektor 3: Zentral-Datenbank":
+                # Flexible Abfrage über die Sektor-Nummer
+                if "Sektor 3" in sektor_wahl:
                     st.divider()
                     st.subheader("📁 ARCHIV-DATEN")
-                    st.write("- **Projekt AlphaStrike:** Dokumentation v1.0 geladen.")
-                    st.write("- **Sektor 0:** Status versteckt.")
+                    st.write("- Projekt AlphaStrike: Dokumentation geladen.")
+                    st.write("- Sicherheits-Status: Stabil.")
                 
-                elif sektor == "Sektor 4: Netzwerk-Knoten":
+                elif "Sektor 4" in sektor_wahl:
                     st.divider()
-                    st.subheader("🌐 NETZWERK-ÜBERWACHUNG")
-                    st.code("NODE-1: AKTIV\nNODE-2: AKTIV")
+                    st.subheader("🌐 NETZWERK-STATUS")
+                    st.code("NODE-1: AKTIV\nNODE-2: AKTIV\nSCAN: LÄUFT...")
+                    st.progress(100)
                 
-                elif sektor == "Sektor 5: Sicherheits-Überwachung":
+                elif "Sektor 5" in sektor_wahl:
                     st.divider()
-                    st.subheader("🔥 FIREWALL-STATUS")
+                    st.subheader("🔥 FIREWALL-MONITOR")
                     st.error("Brute-Force-Detection: ONLINE")
-                    st.write(f"Fehlversuche im Speicher: {st.session_state.failed_attempts}")
+                    st.write(f"Registrierte Fehlversuche: {st.session_state.failed_attempts}")
             else:
-                st.error("Sektor-Passwort falsch!")
+                st.error("🚨 PASSWORT INKORREKT")
+                st.session_state.security_logs.append({"Zeit": time.strftime("%H:%M:%S"), "Ereignis": f"Sektor-Fehlzugriff: {sektor_wahl}", "Status": "CRITICAL"})
 
     elif menu == "Intrusion Logs":
         st.header("🕵️ System-Protokolle (IDS)")
