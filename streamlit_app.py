@@ -1,65 +1,89 @@
 import streamlit as st
 import time
 from github import Github
-import base64
 
 # --- SYSTEM KONFIGURATION ---
 st.set_page_config(page_title="Recherche-Portal Alpha", page_icon="📚")
 
-# --- GITHUB INTEGRATION ---
-# Holt sich den Token sicher aus den Streamlit Secrets
-try:
-    token = st.secrets["GITHUB_TOKEN"]
-    g = Github(token)
-    repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
-except:
-    st.error("⚠️ GitHub-Token fehlt in den Secrets!")
-
-def upload_to_github(image_data, filename):
+# --- GITHUB INTEGRATION (Permanent Logs) ---
+def log_to_github(message):
     try:
-        path = f"intruders/{filename}"
-        repo.create_file(path, f"Audit: {filename}", image_data, branch="main")
+        token = st.secrets["GITHUB_TOKEN"]
+        g = Github(token)
+        repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
+        
+        # Holt das bestehende Log oder erstellt ein neues
+        file_path = "security_audit.txt"
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        new_content = f"[{timestamp}] {message}\n"
+        
+        try:
+            file = repo.get_contents(file_path)
+            existing_content = file.decoded_content.decode()
+            repo.update_file(file_path, "Update Log", existing_content + new_content, file.sha)
+        except:
+            repo.create_file(file_path, "Initial Log", new_content)
         return True
     except:
         return False
 
-# --- LOGIN ---
+# --- SESSION STATE ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 
+# --- LOGIN-BEREICH ---
 if not st.session_state.authenticated:
-    st.title("🛡️ SilasGuardian | Bio-Vault")
-    master_key = st.text_input("Master-Key", type="password")
-    bio_scan = st.camera_input("Identitäts-Abgleich")
-
-    if st.button("System entsperren"):
+    st.title("📚 Projekt-Archiv | Login")
+    
+    # Authentifizierung Silas [cite: 2025-12-28]
+    master_key = st.text_input("Master-Key eingeben", type="password")
+    
+    if st.button("System starten"):
         if master_key == "silas":
             st.session_state.authenticated = True
+            log_to_github("SUCCESS: Silas logged in.")
             st.rerun()
         else:
-            if bio_scan:
-                # Bild für den Upload vorbereiten
-                img_bytes = bio_scan.getvalue()
-                fname = f"intruder_{time.strftime('%Y%m%d_%H%M%S')}.png"
-                if upload_to_github(img_bytes, fname):
-                    st.error("🔒 Zugriff verweigert. Biometrie permanent archiviert.")
-                else:
-                    st.error("🔒 Zugriff verweigert. Backup-Fehler.")
-            else:
-                st.warning("⚠️ Biometrie-Scan erforderlich für Protokollierung.")
+            log_to_github(f"FAILED: Unauthorized attempt with key '{master_key}'")
+            st.error("Zugriff verweigert. Vorfall wurde protokolliert.")
 
 else:
+    # --- HAUPTSYSTEM (A1 Modus) ---
     st.sidebar.title("🛡️ Core Control")
-    menu = st.sidebar.radio("Sektoren", ["Dashboard", "Sektor 0", "Sektor 3"])
+    
+    menu = st.sidebar.radio("Navigation", ["Dashboard", "Sektor 0 (Falle)", "Sektor 3 (Data)", "Sektor 5 (Sentinel)"])
 
     if menu == "Dashboard":
-        st.subheader("🕵️ Permanente Beweissicherung")
-        st.write("Hier werden die Bilder direkt aus deinem GitHub-Ordner geladen:")
+        st.subheader("📊 System-Status & Audit-Logs")
+        st.success("System-Integrität: OK")
         
-        try:
-            contents = repo.get_contents("intruders")
-            for file in reversed(contents):
-                st.image(file.download_url, caption=f"Erfasst am: {file.name}", width=300)
-        except:
-            st.info("Noch keine Beweisbilder im permanenten Speicher.")
+        # Anzeige der permanenten Logs direkt aus GitHub
+        if st.button("Logs von GitHub laden"):
+            try:
+                token = st.secrets["GITHUB_TOKEN"]
+                g = Github(token)
+                repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
+                content = repo.get_contents("security_audit.txt").decoded_content.decode()
+                st.text_area("Permanente Historie:", content, height=300)
+            except:
+                st.info("Noch keine permanenten Logs verfügbar.")
 
-    # ... Sektor 3 Logik bleibt gleich ...
+    elif menu == "Sektor 0 (Falle)":
+        st.subheader("⚠️ Sektor Zero")
+        st.code("DEBUG: Redirecting unauthorized IP to Black-Hole-Server...")
+        st.warning("Eindringling-Täuschung aktiv.")
+
+    elif menu == "Sektor 3 (Data)":
+        # Sektor Passwort "data" [cite: 2025-12-27]
+        st.subheader("📁 Sektor 3: Datenbank")
+        if st.text_input("Sektor-Key", type="password") == "data":
+            st.write("Sichere Notizen hier ablegen...")
+            # Hier könnte man eine Textdatei auf GitHub speichern
+
+    elif menu == "Sektor 5 (Sentinel)":
+        st.subheader("📹 Manuelle Überwachung")
+        st.write("Kamera nur bei Bedarf aktivieren.")
+        st.camera_input("Live-Scanner")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.authenticated = False
+        st.rerun()
