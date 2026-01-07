@@ -1,55 +1,34 @@
 import streamlit as st
 from github import Github
 
-# 1. Verbindung zu GitHub herstellen
-def get_repo():
-    try:
-        token = st.secrets["GITHUB_TOKEN"]
-        g = Github(token)
-        return g.get_repo("plankton31012010-cell/SilasGuardianPro")
-    except:
-        return None
+st.title("🛡️ SilasGuardian Debug-Modus")
 
-st.title("🛡️ SilasGuardian Safe")
-
-# 2. Login Abfrage
-if "login" not in st.session_state: st.session_state.login = False
-
-if not st.session_state.login:
-    pw = st.text_input("Master-Key", type="password")
-    if st.button("Einloggen"):
-        if pw == "silas":
-            st.session_state.login = True
-            st.rerun()
+# PRÜFUNG DER SECRETS
+st.subheader("1. Secrets-Check")
+if "GITHUB_TOKEN" in st.secrets:
+    st.success("✅ 'GITHUB_TOKEN' wurde in den Secrets gefunden!")
+    # Wir zeigen nur die ersten 4 Zeichen zur Sicherheit
+    token_anfang = st.secrets["GITHUB_TOKEN"][:4]
+    st.write(f"Dein Token beginnt mit: `{token_anfang}` (Sollte 'ghp_' sein)")
 else:
-    # 3. Sektor 3 Schreibbereich
-    st.subheader("📁 Sektor 3: Dein Datentresor")
-    repo = get_repo()
-    
-    if repo:
-        st.success("✅ Verbindung zu GitHub steht!")
-        
-        # Versuchen, alte Notizen zu laden
-        try:
-            file = repo.get_contents("notizen.txt", ref="main")
-            inhalt = file.decoded_content.decode()
-        except:
-            inhalt = "Schreibe hier deine ersten Notizen rein..."
+    st.error("❌ 'GITHUB_TOKEN' wurde NICHT gefunden. Prüfe die Schreibweise in den Secrets!")
 
-        neuer_inhalt = st.text_area("Notizen:", value=inhalt, height=200)
+# PRÜFUNG DER VERBINDUNG
+st.subheader("2. GitHub-Verbindung")
+try:
+    token = st.secrets["GITHUB_TOKEN"]
+    g = Github(token)
+    repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
+    st.success(f"✅ Verbindung zu Repository '{repo.full_name}' erfolgreich!")
+except Exception as e:
+    st.error(f"❌ GitHub-Fehler: {e}")
 
-        if st.button("💾 Jetzt auf GitHub speichern"):
-            try:
-                try:
-                    # Update
-                    old_file = repo.get_contents("notizen.txt", ref="main")
-                    repo.update_file("notizen.txt", "Update", neuer_inhalt, old_file.sha, branch="main")
-                except:
-                    # Neu erstellen
-                    repo.create_file("notizen.txt", "Erster Start", neuer_inhalt, branch="main")
-                st.balloons()
-                st.success("Gespeichert! Schau jetzt mal in dein GitHub-Profil.")
-            except Exception as e:
-                st.error(f"Fehler beim Speichern: {e}")
-    else:
-        st.error("❌ Fehler: Der GITHUB_TOKEN in den Secrets ist nicht korrekt.")
+# SPEICHER-TEST
+if st.button("🚀 Test-Datei speichern"):
+    try:
+        repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
+        repo.create_file("test.txt", "Debug Test", "Es funktioniert!", branch="main")
+        st.balloons()
+        st.success("Datei wurde auf GitHub erstellt!")
+    except Exception as e:
+        st.error(f"Speichern fehlgeschlagen: {e}")
