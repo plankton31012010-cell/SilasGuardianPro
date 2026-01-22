@@ -17,38 +17,39 @@ class SilasGuardian:
         if 'auth_level' not in st.session_state: st.session_state.auth_level = "A0"
         if 'login_time' not in st.session_state: st.session_state.login_time = None
         if 'scan_active' not in st.session_state: st.session_state.scan_active = False
-        if 'crash' not in st.session_state: st.session_state.crash = False
-        if 'blackout' not in st.session_state: st.session_state.blackout = False
 
     def write_log(self, filename, message):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(filename, "a") as f:
             f.write(f"[{timestamp}] {message}\n")
 
-    def reset_system(self):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-
     def render(self):
-        st.markdown("<style>.stApp { background-color: #050505; color: #00ff41; font-family: 'Courier New'; }</style>", unsafe_allow_html=True)
+        # --- FUNKTION 5: CUSTOM CYBER-STYLES ---
+        st.markdown("""
+            <style>
+            .stApp { background-color: #050505; color: #00ff41; font-family: 'Courier New', monospace; }
+            
+            /* Custom Progress Bar */
+            .stProgress > div > div > div > div {
+                background-image: linear-gradient(to right, #004400, #00ff41);
+                box-shadow: 0 0 15px #00ff41;
+            }
+            
+            /* Terminal Look für Logs */
+            .terminal-text {
+                color: #00ff41;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                background-color: #001100;
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #004400;
+            }
+            </style>
+            """, unsafe_allow_html=True)
 
-        # --- BLACKOUT & CRASH ---
-        if st.session_state.get('blackout'):
-            st.markdown("<style>.main { background-color: #000 !important; }</style>", unsafe_allow_html=True)
-            if st.button(" ", key="hidden_reset"): self.reset_system()
-            return
-
-        if st.session_state.get('crash'):
-            st.title("☣️ SYSTEM_HALTED")
-            cols = st.columns(4)
-            if cols[0].button("0x0B12"): self.write_log(LOG_FILE, "ALARM: 0x0B12"); st.session_state.blackout = True; st.rerun()
-            if cols[1].button("0xC991"): self.write_log(LOG_FILE, "ALARM: 0xC991"); st.session_state.blackout = True; st.rerun()
-            if cols[2].button("0xAF32"): self.reset_system()
-            if cols[3].button("0x82FF"): self.write_log(LOG_FILE, "ALARM: 0x82FF"); st.session_state.blackout = True; st.rerun()
-            return
-
-        # --- LOGIN ---
+        # --- LOGIN-CHECK ---
         if st.session_state.auth_level == "A0":
             st.title("🛡️ SilasGuardian Login")
             ident = st.text_input("Ident", type="password", key="login_id")
@@ -60,49 +61,60 @@ class SilasGuardian:
                     st.rerun()
             return
 
-        # --- TIMER (5s) ---
+        # --- DYNAMISCHE BEGRÜSSUNG (5s) ---
         elapsed = time.time() - st.session_state.login_time
         if elapsed < 5:
             st.title("Willkommen Anton")
-            st.caption(f"Initialisierung... {5 - int(elapsed)}s")
+            st.caption(f"Systemzugriff gewährt. Initialisiere Module... {5 - int(elapsed)}s")
             time.sleep(1); st.rerun()
         else:
-            st.title("🛡️ SilasGuardian | Terminal")
+            st.title("🛡️ SilasGuardian | Core-Terminal")
 
         tabs = st.tabs(["📡 Scanner", "📂 Sektor 3", "💬 Bridge", "🛡️ Sektor Zero"])
 
-        # --- 1. SCANNER (ULTIMATIVE REPARATUR) ---
+        # --- 1. SCANNER (UPGRADED VISUALS) ---
         with tabs[0]:
-            st.subheader("📡 Deep-Net-Inspector")
+            st.subheader("📡 Deep-Net-Inspector v2.0")
             
-            # Wir nutzen einen Container, um die Ergebnisse stabil zu halten
-            scan_container = st.container()
-            
-            if st.button("Deep Scan starten"):
-                st.session_state.scan_active = False # Reset
+            if st.button("Deep Scan starten", key="start_scan"):
+                st.session_state.scan_active = False
+                
+                # Terminal Log Animation
+                log_placeholder = st.empty()
                 progress_bar = st.progress(0)
-                status_text = st.empty()
+                
+                tech_logs = [
+                    "INITIALIZING SYN SCAN...", "REACHING GATEWAY 192.168.1.1...",
+                    "BYPASSING LOCAL FIREWALL...", "COLLECTING MAC ADDRESSES...",
+                    "DECRYPTING DEVICE SIGNATURES...", "MAPPING NETWORK NODES...",
+                    "COMPILING DATA TABLES...", "SCAN COMPLETE."
+                ]
                 
                 for i in range(100):
-                    time.sleep(0.02)
+                    time.sleep(0.03)
                     progress_bar.progress(i + 1)
-                    status_text.text(f"Analysiere Netzwerk-Pakete... {i+1}%")
+                    
+                    # Logik: Zeige alle paar Prozent eine neue technische Zeile
+                    current_log_idx = min(i // 15, len(tech_logs) - 1)
+                    log_placeholder.markdown(f"""
+                        <div class="terminal-text">
+                        > {tech_logs[current_log_idx]}<br>
+                        > ADDR_PTR: 0x{random.randint(1000, 9999)}<br>
+                        > PACKET_STREAMS: {i*124} KB/s
+                        </div>
+                    """, unsafe_allow_html=True)
                 
-                # Hier setzen wir den Status direkt NACH der Schleife
                 st.session_state.scan_active = True
-                status_text.success("✅ Scan abgeschlossen.")
+                st.success("✅ Netzwerk-Analyse abgeschlossen.")
 
-            # Die Anzeige erfolgt unabhängig vom Button-Klick, solange scan_active True ist
             if st.session_state.get('scan_active'):
+                st.divider()
                 scan_data = [
                     {"IP": "192.168.1.1", "Gerät": "FritzBox 7590", "MAC": "00:E0:4C:53:12:01", "Info": "Gateway"},
                     {"IP": "192.168.1.42", "Gerät": "Apple iPhone 15", "MAC": "7C:D1:C3:94:02:88", "Info": "Mobil"},
                     {"IP": "192.168.1.105", "Gerät": "Sony PS5", "MAC": "44:F4:11:00:AA:BB", "Info": "Konsole"}
                 ]
                 st.table(pd.DataFrame(scan_data))
-                if st.button("Ergebnisse verwerfen"):
-                    st.session_state.scan_active = False
-                    st.rerun()
 
         # --- 2. SEKTOR 3 (VAULT) ---
         with tabs[1]:
@@ -113,13 +125,13 @@ class SilasGuardian:
                 if os.path.exists(BRIDGE_FILE):
                     with open(BRIDGE_FILE, "r") as f: st.text_area("Bridge Archiv", f.read(), height=150)
             st.divider()
-            up = st.file_uploader("Upload")
+            up = st.file_uploader("Datei hochladen")
             if up:
                 with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
             for f_name in os.listdir(VAULT_PATH):
                 if f_name not in ["intruder_log.txt", "bridge_logs.txt"]:
                     with open(os.path.join(VAULT_PATH, f_name), "rb") as fb:
-                        st.download_button(f"🔓 {f_name}", fb, file_name=f_name, key=f_name)
+                        st.download_button(f"🔓 {f_name} öffnen", fb, file_name=f_name, key=f_name)
 
         # --- 3. BRIDGE ---
         with tabs[2]:
@@ -127,7 +139,9 @@ class SilasGuardian:
             new_msg = st.text_input("Nachricht...", key="msg_input")
             if st.button("Senden"):
                 if new_msg:
-                    self.write_log(BRIDGE_FILE, f"Anton: {new_msg}")
+                    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    with open(BRIDGE_FILE, "a") as f:
+                        f.write(f"[{timestamp}] Anton: {new_msg}\n")
                     st.rerun()
             if os.path.exists(BRIDGE_FILE):
                 with open(BRIDGE_FILE, "r") as f:
@@ -135,8 +149,13 @@ class SilasGuardian:
 
         # --- 4. SEKTOR ZERO ---
         with tabs[3]:
-            if st.toggle("PANIC MODE"): st.session_state.crash = True; st.rerun()
-            if st.button("🚨 Shutdown"): self.reset_system()
+            if st.toggle("PANIC MODE"): 
+                st.session_state.crash = True
+                st.rerun()
+            if st.button("🚨 Shutdown"): 
+                st.session_state.auth_level = "A0"
+                st.rerun()
 
 if __name__ == "__main__":
+    import random
     SilasGuardian().render()
