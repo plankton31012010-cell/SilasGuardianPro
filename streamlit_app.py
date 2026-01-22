@@ -1,6 +1,6 @@
 import streamlit as st
-import socket
 import time
+import socket
 import pandas as pd
 from scapy.all import ARP, Ether, srp
 
@@ -9,81 +9,66 @@ st.set_page_config(page_title="SilasGuardian", page_icon="🛡️", layout="wide
 
 class SilasGuardian:
     def __init__(self):
+        # Initialisierung der Zustände
         if 'auth_level' not in st.session_state:
             st.session_state.auth_level = "A0"
+        if 'sectors' not in st.session_state:
+            st.session_state.sectors = {
+                0: {"name": "Sektor Zero", "status": "Deceptive/Aktiv", "desc": "Täuschungsmodul für Angreifer."},
+                1: {"name": "Kern-System", "status": "Online", "desc": "Zentrale Steuerungseinheit."},
+                2: {"name": "Comms-Bridge", "status": "Online", "desc": "Sicherer Datenkanal."},
+                3: {"name": "Sektor 3", "status": "Autorisiert", "desc": "Verschlüsselter Datentresor (ehem. Archiv)."}
+            }
 
     def get_local_ip(self):
-        """Ermittelt die IP-Adresse deines Computers im Netzwerk"""
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        """Ermittelt die IP des ausführenden Systems"""
         try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(('8.8.8.8', 1))
             ip = s.getsockname()[0]
-        except Exception:
-            ip = '127.0.0.1'
-        finally:
             s.close()
-        return ip
+            return ip
+        except:
+            return '127.0.0.1'
 
-    def real_network_scan(self):
+    def run_real_scan(self):
         """Führt einen echten ARP-Scan im lokalen Netzwerk aus"""
+        st.write("### 🔍 Real-Time Netzwerk-Scan")
         local_ip = self.get_local_ip()
-        # Erstellt den IP-Bereich (z.B. 192.168.1.0/24)
         ip_range = ".".join(local_ip.split('.')[:-1]) + ".0/24"
         
-        st.write(f"### 🔍 Scanne echtes Netzwerk: `{ip_range}`")
-        progress = st.progress(0)
+        st.info(f"Zielbereich: {ip_range} (Basierend auf lokaler IP: {local_ip})")
         
-        try:
-            # Erstelle ARP-Anfrage
-            arp = ARP(pdst=ip_range)
-            ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-            packet = ether/arp
-
-            # Sende Paket und empfange Antwort (Timeout 2 Sek)
-            result = srp(packet, timeout=2, verbose=False)[0]
-
-            devices = []
-            for sent, received in result:
-                # Versuche den Namen des Geräts (Hostname) zu finden
-                try:
-                    hostname = socket.gethostbyaddr(received.psrc)[0]
-                except:
-                    hostname = "Unbekanntes Gerät"
+        with st.spinner("Sende ARP-Pakete an Netzwerk-Teilnehmer..."):
+            try:
+                # Erstellung der Netzwerk-Pakete
+                arp = ARP(pdst=ip_range)
+                ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+                packet = ether/arp
                 
-                devices.append({'IP-Adresse': received.psrc, 'MAC-Adresse': received.hwsrc, 'Gerätename': hostname})
+                # Senden und Empfangen (Echter Scan)
+                result = srp(packet, timeout=3, verbose=False)[0]
 
-            if devices:
-                df = pd.DataFrame(devices)
-                st.table(df)
-                st.success(f"Scan abgeschlossen. {len(devices)} aktive Geräte gefunden.")
-            else:
-                st.warning("Keine Geräte gefunden. Bist du sicher, dass du Admin-Rechte hast?")
-                
-        except Exception as e:
-            st.error(f"Fehler beim Zugriff auf Netzwerk-Interface: {e}")
-            st.info("Hinweis: Echte Netzwerk-Scans benötigen Administrator-Rechte (sudo/admin).")
+                devices = []
+                for sent, received in result:
+                    # Versuche Hostname zu ermitteln
+                    try:
+                        name = socket.gethostbyaddr(received.psrc)[0]
+                    except:
+                        name = "Unbekanntes Gerät"
+                    
+                    devices.append({
+                        "IP-Adresse": received.psrc,
+                        "MAC-Adresse": received.hwsrc,
+                        "Gerätename": name
+                    })
 
-    def startup_sequence(self):
-        if st.session_state.auth_level == "A0":
-            st.title("SilasGuardian")
-            col1, col2 = st.columns(2)
-            ident = col1.text_input("Identitäts-Key", type="password")
-            pwd = col2.text_input("Sektor-Passwort", type="password")
+                if devices:
+                    st.success(f"Scan erfolgreich: {len(devices)} Geräte aktiv.")
+                    st.table(pd.DataFrame(devices))
+                else:
+                    st.warning("Keine Geräte gefunden. Prüfe deine Admin-Rechte.")
             
-            if st.button("System A1 Hochfahren"):
-                if ident.lower() == "silas" and pwd.lower() == "data":
-                    st.session_state.auth_level = "A1+"
-                    st.rerun()
-            return
-
-        # ADMIN-BEREICH (ANTON)
-        st.title("Hallo Anton")
-        st.sidebar.button("Shutdown (A0)", on_click=lambda: st.session_state.update({"auth_level": "A0"}))
-
-        st.header("📡 Real-Time Netzwerk-Analyse")
-        if st.button("Echten Scan jetzt starten"):
-            self.real_network_scan()
-
-# --- START ---
-system = SilasGuardian()
-system.startup_sequence()
+            except Exception as e:
+                st.error(f"Scan-Fehler: {e}")
+                st.info("Hinweis: Echte Netzwerk-Scans erfordern
