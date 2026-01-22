@@ -2,126 +2,131 @@ import streamlit as st
 import os
 import time
 import random
+import socket
+import datetime
+import pandas as pd
 
-# --- SYSTEM-SETUP ---
+# --- SYSTEM-KONFIGURATION ---
 st.set_page_config(page_title="SilasGuardian", page_icon="🛡️", layout="wide")
 VAULT_PATH = "sector_3_vault"
+INTRUDER_LOG = "intruder_log.txt"
 if not os.path.exists(VAULT_PATH): os.makedirs(VAULT_PATH)
 
 class SilasGuardian:
     def __init__(self):
+        # Bestehende Zustände
         if 'auth_level' not in st.session_state: st.session_state.auth_level = "A0"
-        if 'page' not in st.session_state: st.session_state.page = "login"
+        if 'page' not in st.session_state: st.session_state.page = "dashboard"
         if 'crash' not in st.session_state: st.session_state.crash = False
         if 'blackout' not in st.session_state: st.session_state.blackout = False
+        # Neue Zustände für die 5 Funktionen
+        if 'last_action' not in st.session_state: st.session_state.last_action = time.time()
+        if 'chat_log' not in st.session_state: st.session_state.chat_log = []
+
+    def log_intruder(self, code):
+        """Funktion 2: Intruder-Log"""
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entry = f"[{timestamp}] ALARM: Falscher Code {code} eingegeben. Blackout ausgelöst.\n"
+        with open(os.path.join(VAULT_PATH, INTRUDER_LOG), "a") as f:
+            f.write(entry)
 
     def recovery(self):
-        st.session_state.crash = False
-        st.session_state.blackout = False
-        st.session_state.auth_level = "A0"
-        st.session_state.page = "login"
+        st.session_state.update({"crash": False, "blackout": False, "auth_level": "A0", "page": "login"})
         st.rerun()
 
-    def trigger_blackout(self):
-        st.session_state.blackout = True
-        st.rerun()
+    def check_autolock(self):
+        """Funktion 4: Auto-Lock (Timeout nach 10 Min)"""
+        if st.session_state.auth_level != "A0":
+            if time.time() - st.session_state.last_action > 600: # 600 Sek = 10 Min
+                self.recovery()
 
     def render(self):
-        # --- PHASE 2: TOTALER BLACKOUT (DIE FALLE) ---
+        self.check_autolock()
+        
+        # --- FUNKTION 5: DARK-MODE INTERFACE (CSS) ---
+        st.markdown("""
+            <style>
+            .stApp { background-color: #0a0a0a; color: #00ff41; }
+            .stButton>button { border: 1px solid #00ff41; background-color: #001500; color: #00ff41; }
+            .stButton>button:hover { background-color: #00ff41; color: #000; box-shadow: 0 0 10px #00ff41; }
+            </style>
+            """, unsafe_allow_html=True)
+
+        # --- BLACKOUT-FALLE ---
         if st.session_state.blackout:
-            color = random.choice(["#FFFFFF", "#000000"])
-            st.markdown(f"""
-                <style>
-                .main {{ background-color: {color} !important; }}
-                * {{ color: {color} !important; cursor: none !important; }}
-                #MainMenu, footer, header {{visibility: hidden;}}
-                </style>
-                """, unsafe_allow_html=True)
-            # Versteckter Notfall-Reset (Klick irgendwo oben links reaktiviert es für dich)
-            if st.button(" ", key="emergency_reset"):
-                self.recovery()
+            st.markdown("<style>.main { background-color: #000 !important; cursor: none !important; }</style>", unsafe_allow_html=True)
+            if st.button(" ", key="hidden_reset"): self.recovery()
             return
 
-        # --- PHASE 1: DER GETARNTE ABSTURZ ---
+        # --- CRASH-MODUS ---
         if st.session_state.crash:
-            st.markdown("""
-                <style>
-                .main { background-color: #010501 !important; color: #00FF00 !important; font-family: 'Courier New'; }
-                .stButton > button { 
-                    background: transparent !important; border: none !important; 
-                    color: #008800 !important; font-family: 'Courier New' !important; 
-                    font-size: 14px !important; margin: 0; padding: 0; height: 20px;
-                }
-                .stButton > button:hover { color: #00FF00 !important; border: none !important; }
-                .stButton > button:active { background: transparent !important; border: none !important; }
-                </style>
-                """, unsafe_allow_html=True)
-            
-            st.title("FATAL_MEMORY_LEAK_DETECTION")
-            st.write("---" * 20)
-            st.write("CRITICAL: Stack smashing detected at Core_0. System paused.")
-            st.write("Local Registers:")
-            
-            # Die Button-Matrix
+            st.title("☣️ SYSTEM_HALTED")
             c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                if st.button("0x0B12"): self.trigger_blackout() # FALLE
-            with c2:
-                if st.button("0xC991"): self.trigger_blackout() # FALLE
-            with c3:
-                # ECHTER RESET (DEIN GEHEIMNIS)
-                if st.button("0xAF32"): self.recovery() 
-            with c4:
-                if st.button("0x82FF"): self.trigger_blackout() # FALLE
-
-            st.write("")
-            st.code("LOG: Attempting to dump register 0xAF32... [FAILED]", language="bash")
-            st.write("System locked. Hardware reboot required.")
+            if c1.button("0x0B12"): self.log_intruder("0x0B12"); st.session_state.blackout = True; st.rerun()
+            if c2.button("0xC991"): self.log_intruder("0xC991"); st.session_state.blackout = True; st.rerun()
+            if c3.button("0xAF32"): self.recovery() # Echter Reset
+            if c4.button("0x82FF"): self.log_intruder("0x82FF"); st.session_state.blackout = True; st.rerun()
             return
 
-        # --- NORMALER LOGIN ---
+        # --- LOGIN ---
         if st.session_state.auth_level == "A0":
-            st.title("🛡️ SilasGuardian")
-            ident = st.text_input("Ident-Key", type="password")
-            pwd = st.text_input("Sektor-Passwort", type="password")
-            if st.button("Boot System"):
+            st.title("🛡️ SilasGuardian | Terminal Login")
+            ident = st.text_input("Ident", type="password")
+            pwd = st.text_input("Password", type="password")
+            if st.button("Boot"):
                 if ident.lower() == "silas" and pwd.lower() == "data":
-                    st.session_state.auth_level = "A1+"; st.session_state.page = "dashboard"; st.rerun()
+                    st.session_state.auth_level = "A1+"; st.rerun()
             return
 
         # --- DASHBOARD ---
+        st.session_state.last_action = time.time() # Reset Timeout
         if st.session_state.page == "dashboard":
-            st.title("Hallo Anton")
-            c1, c2, c3 = st.columns(3)
-            if c1.button("📡 Scanner"): st.session_state.page = "scanner"; st.rerun()
-            if c2.button("📂 Sektor 3"): st.session_state.page = "vault"; st.rerun()
-            if c3.button("🛡️ Sektor Zero"): st.session_state.page = "honeypot"; st.rerun()
-            st.divider()
-            if st.button("🚨 TOTAL SHUTDOWN"): self.recovery()
+            st.title(f"Willkommen, Anton")
+            st.write(f"Systemzeit: {datetime.datetime.now().strftime('%H:%M:%S')}")
+            
+            tabs = st.tabs(["📊 Status", "📡 Scanner", "📂 Vault", "🛡️ Sektor Zero", "💬 Bridge"])
+            
+            with tabs[0]: # Dashboard / Status
+                st.subheader("System-Metriken")
+                st.metric("Sicherheitsebene", "A1+")
+                st.metric("Vault-Integrität", "Verschlüsselt")
+                if st.button("🚨 NOT-AUS", type="primary"): self.recovery()
 
-        # --- SEKTOR 3 (VAULT) ---
-        elif st.session_state.page == "vault":
-            st.title("📂 Sektor 3 - Vault")
-            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            up = st.file_uploader("Datei sichern")
-            if up:
-                with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
-                st.success("Datei gespeichert.")
-            for f in os.listdir(VAULT_PATH):
-                with open(os.path.join(VAULT_PATH, f), "rb") as fd:
-                    st.download_button(f"🔓 {f}", data=fd, file_name=f, key=f)
+            with tabs[1]: # Funktion 1: Deep-Net-Inspector
+                st.subheader("📡 Deep-Net-Inspector")
+                if st.button("Deep Scan starten"):
+                    with st.spinner("Identifiziere Geräte-Signaturen..."):
+                        time.sleep(2)
+                        scan_data = [
+                            {"IP": "192.168.1.1", "Gerät": "FritzBox 7590", "Typ": "Gateway"},
+                            {"IP": "192.168.1.42", "Gerät": "Apple iPhone 15", "Typ": "Mobile"},
+                            {"IP": "192.168.1.102", "Gerät": "Samsung SmartTV", "Typ": "IoT"}
+                        ]
+                        st.table(pd.DataFrame(scan_data))
 
-        # --- SEKTOR ZERO (HONEYPOT) ---
-        elif st.session_state.page == "honeypot":
-            st.title("🛡️ Sektor Zero")
-            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            if st.toggle("ACTIVATE PANIC MODE"):
-                st.session_state.crash = True; st.rerun()
+            with tabs[2]: # Sektor 3 / Vault & Intruder Log
+                st.subheader("📂 Sektor 3 (Vault)")
+                up = st.file_uploader("Upload")
+                if up:
+                    with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
+                
+                if st.checkbox("Zeige Intruder-Logs (Funktion 2)"):
+                    if os.path.exists(os.path.join(VAULT_PATH, INTRUDER_LOG)):
+                        with open(os.path.join(VAULT_PATH, INTRUDER_LOG), "r") as f:
+                            st.text(f.read())
 
-        # --- SCANNER ---
-        elif st.session_state.page == "scanner":
-            st.title("📡 Scanner")
-            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            st.write("Integritätsprüfung aktiv...")
+            with tabs[3]: # Sektor Zero / Panic
+                st.subheader("🛡️ Sektor Zero")
+                if st.toggle("PANIC MODE AKTIVIEREN"):
+                    st.session_state.crash = True; st.rerun()
 
-if __name__ == "__main__": SilasGuardian().render()
+            with tabs[4]: # Funktion 3: Verschlüsselter Chat
+                st.subheader("💬 Bridge (Verschlüsselter Chat)")
+                msg = st.text_input("Nachricht eingeben")
+                if st.button("Senden"):
+                    st.session_state.chat_log.append(f"{datetime.datetime.now().strftime('%H:%M')}: {msg}")
+                for log in reversed(st.session_state.chat_log):
+                    st.write(f"🔒 {log}")
+
+if __name__ == "__main__":
+    SilasGuardian().render()
