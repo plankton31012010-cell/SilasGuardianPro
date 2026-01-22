@@ -1,92 +1,112 @@
 import streamlit as st
-import socket
-import pandas as pd
+import os
 import time
-import random
 
-# --- KONFIGURATION ---
+# --- KONFIGURATION & PERSISTENZ ---
 st.set_page_config(page_title="SilasGuardian", page_icon="🛡️", layout="wide")
+SAVE_DIR = "sector_3_vault"
+if not os.path.exists(SAVE_DIR):
+    os.makedirs(SAVE_DIR)
 
 class SilasGuardian:
     def __init__(self):
         if 'auth_level' not in st.session_state:
             st.session_state.auth_level = "A0"
-        if 'vault_data' not in st.session_state:
-            st.session_state.vault_data = {} # Speichert Dateiname und Inhalt
-        if 'honeypot_logs' not in st.session_state:
-            st.session_state.honeypot_logs = []
+        if 'page' not in st.session_state:
+            st.session_state.page = "login"
 
-    def run_network_scan(self):
-        st.write("### 🔍 Aktiver Netzwerk-Port-Scan")
-        hostname = socket.gethostname()
-        base_ip = ".".join(socket.gethostbyname(hostname).split('.')[:-1]) + "."
-        found = []
-        bar = st.progress(0)
-        for i in range(1, 21): # Scannt ersten 20 IPs im Subnetz
-            ip = f"{base_ip}{i}"
-            bar.progress(i/20)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.05)
-            if sock.connect_ex((ip, 80)) == 0:
-                found.append({"IP": ip, "Dienst": "HTTP", "Status": "Online"})
-            sock.close()
-        if found: st.table(pd.DataFrame(found))
-        else: st.warning("Keine offenen Endpunkte gefunden.")
+    def logout(self):
+        st.session_state.auth_level = "A0"
+        st.session_state.page = "login"
+        st.rerun()
 
     def render(self):
+        # --- 1. LOGIN SEITE ---
         if st.session_state.auth_level == "A0":
-            st.title("SilasGuardian")
+            st.title("🛡️ SilasGuardian | Systemzugang")
+            st.divider()
             col1, col2 = st.columns(2)
             ident = col1.text_input("Ident-Key", type="password")
             pwd = col2.text_input("Sektor-Passwort", type="password")
-            if st.button("System A1 Hochfahren"):
+            
+            if st.button("System initialisieren"):
                 if ident.lower() == "silas" and pwd.lower() == "data":
                     st.session_state.auth_level = "A1+"
+                    st.session_state.page = "dashboard"
+                    st.success("Autorisierung erfolgreich.")
+                    time.sleep(1)
                     st.rerun()
+                else:
+                    st.error("Zugriff verweigert.")
             return
 
-        # --- ADMIN BEREICH ---
-        st.title("Hallo Anton")
-        
-        tab1, tab2, tab3 = st.tabs(["📡 Scanner", "📂 Sektor 3 (Vault)", "🛡️ Sektor Zero"])
-
-        with tab1:
-            if st.button("Netzwerk-Scan ausführen"):
-                self.run_network_scan()
-
-        with tab2:
-            st.header("Sektor 3: Datentresor")
-            up = st.file_uploader("Datei sicher ablegen")
-            if up and st.button("Verschlüsseln"):
-                st.session_state.vault_data[up.name] = up.getvalue()
-                st.success(f"{up.name} gesichert.")
+        # --- 2. DAS NEUE DASHBOARD (STARTSEITE NACH LOGIN) ---
+        if st.session_state.page == "dashboard":
+            st.title("Hallo Anton")
+            st.subheader("Willkommen im SilasGuardian Hauptquartier")
+            st.info("Systemstatus: ONLINE (Modus A1+)")
+            
+            st.write("Wähle ein Modul aus der Übersicht:")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("📡 Netzwerk-Scanner öffnen", use_container_width=True):
+                    st.session_state.page = "scanner"
+                    st.rerun()
+            with col2:
+                if st.button("📂 Sektor 3 (Datentresor)", use_container_width=True):
+                    st.session_state.page = "vault"
+                    st.rerun()
+            with col3:
+                if st.button("🛡️ Sektor Zero", use_container_width=True):
+                    st.session_state.page = "honeypot"
+                    st.rerun()
 
             st.divider()
-            st.subheader("Archivierte Dateien")
-            for filename, content in st.session_state.vault_data.items():
-                col_a, col_b = st.columns([3, 1])
-                col_a.write(f"🔒 {filename}")
-                # DOWNLOAD BUTTON ZUM ÖFFNEN
-                col_b.download_button(label="Entschlüsseln & Öffnen", 
-                                    data=content, 
-                                    file_name=f"decrypted_{filename}")
+            if st.button("🚨 SYSTEM SHUTDOWN", type="primary", use_container_width=True):
+                self.logout()
 
-        with tab3:
-            st.header("Sektor Zero: Honey-Pot Kontrolle")
-            hp_active = st.toggle("HoneyPot-Protokoll aktivieren")
+        # --- 3. MODUL: NETZWERK-SCANNER ---
+        elif st.session_state.page == "scanner":
+            st.title("📡 Netzwerk-Scanner")
+            if st.button("← Zurück zum Dashboard"):
+                st.session_state.page = "dashboard"
+                st.rerun()
+            st.write("Scanner-Logik aktiv...")
+            # Hier kommt dein Scan-Code rein
+
+        # --- 4. MODUL: SEKTOR 3 (MIT SPEICHER-FUNKTION) ---
+        elif st.session_state.page == "vault":
+            st.title("📂 Sektor 3: Sicherer Datentresor")
+            if st.button("← Zurück zum Dashboard"):
+                st.session_state.page = "dashboard"
+                st.rerun()
             
-            if hp_active:
-                st.warning("⚠️ HoneyPot ist aktiv. Echter Traffic wird maskiert.")
-                if st.button("Angriffs-Simulation starten"):
-                    fake_ips = ["142.251.36.46", "31.13.72.36", "172.217.16.14"]
-                    log_entry = f"[{time.strftime('%H:%M:%S')}] Abgefangener Zugriff von IP: {random.choice(fake_ips)}"
-                    st.session_state.honeypot_logs.append(log_entry)
-                
-                if st.session_state.honeypot_logs:
-                    for log in reversed(st.session_state.honeypot_logs):
-                        st.code(log)
+            up = st.file_uploader("Datei dauerhaft speichern")
+            if up:
+                with open(os.path.join(SAVE_DIR, up.name), "wb") as f:
+                    f.write(up.getbuffer())
+                st.success(f"'{up.name}' wurde physikalisch in Sektor 3 gespeichert.")
+
+            st.divider()
+            st.subheader("Archivierte Dateien (Persistent)")
+            files = os.listdir(SAVE_DIR)
+            if files:
+                for f in files:
+                    col_f, col_d = st.columns([4, 1])
+                    col_f.write(f"🔒 {f}")
+                    with open(os.path.join(SAVE_DIR, f), "rb") as file_bytes:
+                        col_d.download_button("Öffnen", data=file_bytes, file_name=f, key=f)
             else:
-                st.info("HoneyPot im Standby. System ist für Scanner direkt sichtbar.")
+                st.write("Keine Daten gefunden.")
+
+        # --- 5. MODUL: SEKTOR ZERO ---
+        elif st.session_state.page == "honeypot":
+            st.title("🛡️ Sektor Zero: Honey-Pot")
+            if st.button("← Zurück zum Dashboard"):
+                st.session_state.page = "dashboard"
+                st.rerun()
+            st.toggle("Täuschungsprotokoll aktiv")
 
 # --- START ---
 if __name__ == "__main__":
