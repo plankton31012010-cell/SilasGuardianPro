@@ -15,6 +15,7 @@ class SilasGuardian:
         if 'crash' not in st.session_state: st.session_state.crash = False
 
     def recovery(self):
+        # Hard Reset der Zustände
         st.session_state.crash = False
         st.session_state.auth_level = "A0"
         st.session_state.page = "login"
@@ -25,35 +26,32 @@ class SilasGuardian:
         if st.session_state.crash:
             st.markdown("""
                 <style>
-                @keyframes crt { 0% { opacity: 0.9; } 50% { opacity: 1; } 100% { opacity: 0.9; } }
-                .main { background-color: #020000 !important; color: #00FF00 !important; font-family: 'Courier New'; animation: crt 0.1s infinite; }
+                .main { background-color: #020000 !important; color: #00FF00 !important; font-family: 'Courier New'; }
                 .stButton > button { 
-                    background: transparent !important; border: none !important; color: #00FF00 !important; 
-                    font-family: 'Courier New' !important; font-size: 14px !important; padding: 0 !important; 
-                    margin: 0 !important; height: auto !important; width: auto !important; cursor: default !important;
+                    background: transparent !important; border: 1px solid #003300 !important; color: #00FF00 !important; 
+                    font-family: 'Courier New' !important; font-size: 14px !important; 
+                    cursor: crosshair !important;
                 }
-                .stButton > button:active { background: transparent !important; color: #00FF00 !important; }
+                .stButton > button:hover { border: 1px solid #00FF00 !important; }
                 </style>
                 """, unsafe_allow_html=True)
             
             st.title("FATAL_EXCEPTION_0x00E44")
-            st.write("A critical error has occurred and the system has been halted to prevent data loss.")
             st.write("---" * 20)
             st.write("KERNEL_THREAD_PANIC: SECTOR_ZERO_OVERWRITE")
-            st.write("Dumping physical memory to disk: 100%")
-            st.write("Contact your system administrator if this problem persists.")
+            st.write("Dumping physical memory to disk...")
             st.write("")
             
-            # GETARNTER RESET: Er sieht aus wie eine technische Zeile
-            col1, col2 = st.columns([1, 10])
+            # GETARNTER RESET: Jetzt stabil in einer Spalte
+            col1, col2 = st.columns([1, 5])
             with col1:
-                # Nur dieser kleine Teil ist der Button!
-                if st.button(f"0x{random.randint(4000, 9999)}A"):
+                # Wir nehmen eine feste Zahl für diesen Absturz-Zyklus
+                if st.button("0x88FF2"):
                     self.recovery()
             with col2:
-                st.write("  <-- STACK_ADDR_RECOVERY_POINT")
+                st.write(" <-- ADDR_STK_RECOVERY")
             
-            st.code(f"REGISTER_DUMP: EAX={random.getrandbits(32)} EBX={random.getrandbits(32)}", language="bash")
+            st.code("DEBUG_PTR: [C://SYSTEM/ROOT/SILAS_PROT.LOG]", language="bash")
             return
 
         # --- LOGIN ---
@@ -66,10 +64,9 @@ class SilasGuardian:
                     st.session_state.auth_level = "A1+"; st.session_state.page = "dashboard"; st.rerun()
             return
 
-        # --- DASHBOARD (ANTON) ---
+        # --- DASHBOARD ---
         if st.session_state.page == "dashboard":
             st.title("Hallo Anton")
-            st.subheader("Systemstatus: A1+ Vollzugriff")
             c1, c2, c3 = st.columns(3)
             if c1.button("📡 Scanner"): st.session_state.page = "scanner"; st.rerun()
             if c2.button("📂 Sektor 3"): st.session_state.page = "vault"; st.rerun()
@@ -85,6 +82,7 @@ class SilasGuardian:
             if up:
                 with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
                 st.success("Datei gespeichert.")
+            
             for f in os.listdir(VAULT_PATH):
                 with open(os.path.join(VAULT_PATH, f), "rb") as fd:
                     st.download_button(f"🔓 {f}", data=fd, file_name=f, key=f)
@@ -101,8 +99,7 @@ class SilasGuardian:
         elif st.session_state.page == "scanner":
             st.title("📡 Scanner")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            st.write("Scan läuft...")
-            time.sleep(1)
-            st.success("Netzwerk sauber.")
+            st.write("Echtzeit-Analyse aktiv...")
+            # Hier kannst du deine Port-Scan Logik wieder einfügen
 
 if __name__ == "__main__": SilasGuardian().render()
