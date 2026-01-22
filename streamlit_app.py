@@ -1,34 +1,44 @@
-import streamlit as st
-from github import Github
+import time
+import hashlib
 
-st.title("🛡️ SilasGuardian Debug-Modus")
+class SilasGuardian:
+    def __init__(self):
+        self.security_level = "A0"
+        self.sectors = {
+            0: {"name": "False Trail", "status": "Deceptive"},
+            1: {"name": "Core System", "status": "Standby"},
+            2: {"name": "Comms Bridge", "status": "Standby"},
+            3: {"name": "Data Vault", "status": "Locked"} # Ehemals Archiv-Daten
+        }
 
-# PRÜFUNG DER SECRETS
-st.subheader("1. Secrets-Check")
-if "GITHUB_TOKEN" in st.secrets:
-    st.success("✅ 'GITHUB_TOKEN' wurde in den Secrets gefunden!")
-    # Wir zeigen nur die ersten 4 Zeichen zur Sicherheit
-    token_anfang = st.secrets["GITHUB_TOKEN"][:4]
-    st.write(f"Dein Token beginnt mit: `{token_anfang}` (Sollte 'ghp_' sein)")
-else:
-    st.error("❌ 'GITHUB_TOKEN' wurde NICHT gefunden. Prüfe die Schreibweise in den Secrets!")
+    def boot_sequence(self, auth_key, sector_pass):
+        """Initialisiert den A1-Hochfahrmodus"""
+        print(f"[*] Initialisiere SilasGuardian Production Mode...")
+        
+        # Authentifizierungs-Check
+        if auth_key.lower() == "silas":
+            print("[+] Identität bestätigt. Lade Kernmodule...")
+            time.sleep(1)
+            
+            if sector_pass.lower() == "data":
+                self.security_level = "A1"
+                self.sectors[3]["status"] = "ACTIVE"
+                print(f"[SUCCESS] Sektor 3 (Data Vault) autorisiert und online.")
+                self.activate_full_system()
+            else:
+                print("[!] Falsches Sektor-Passwort. Zugriff verweigert.")
+        else:
+            print("[CRITICAL] Unbefugter Zugriff detektiert. Notfall-A0 wird gehalten.")
 
-# PRÜFUNG DER VERBINDUNG
-st.subheader("2. GitHub-Verbindung")
-try:
-    token = st.secrets["GITHUB_TOKEN"]
-    g = Github(token)
-    repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
-    st.success(f"✅ Verbindung zu Repository '{repo.full_name}' erfolgreich!")
-except Exception as e:
-    st.error(f"❌ GitHub-Fehler: {e}")
+    def activate_full_system(self):
+        print("--- SYSTEM-STATUS: ONLINE ---")
+        for s_id, info in self.sectors.items():
+            print(f"Sector {s_id} [{info['name']}]: RUNNING")
+        print("------------------------------")
+        print("Willkommen zurück, Silas. Alle Protokolle sind aktiv.")
 
-# SPEICHER-TEST
-if st.button("🚀 Test-Datei speichern"):
-    try:
-        repo = g.get_repo("plankton31012010-cell/SilasGuardianPro")
-        repo.create_file("test.txt", "Debug Test", "Es funktioniert!", branch="main")
-        st.balloons()
-        st.success("Datei wurde auf GitHub erstellt!")
-    except Exception as e:
-        st.error(f"Speichern fehlgeschlagen: {e}")
+# --- STARTUP ---
+if __name__ == "__main__":
+    guardian = SilasGuardian()
+    # Beispiel für den realen Aufruf:
+    guardian.boot_sequence(auth_key="silas", sector_pass="data")
