@@ -15,51 +15,55 @@ class SilasGuardian:
         if 'crash' not in st.session_state: st.session_state.crash = False
 
     def recovery(self):
-        # Hard Reset der Zustände
         st.session_state.crash = False
         st.session_state.auth_level = "A0"
         st.session_state.page = "login"
         st.rerun()
 
     def render(self):
-        # --- DER ULTIMATIVE GETARNTE ABSTURZ ---
+        # --- DAS MINENFELD IM ABSTURZ ---
         if st.session_state.crash:
             st.markdown("""
                 <style>
-                .main { background-color: #020000 !important; color: #00FF00 !important; font-family: 'Courier New'; }
+                .main { background-color: #010a01 !important; color: #00FF00 !important; font-family: 'Courier New'; }
                 .stButton > button { 
-                    background: transparent !important; border: 1px solid #003300 !important; color: #00FF00 !important; 
-                    font-family: 'Courier New' !important; font-size: 14px !important; 
-                    cursor: crosshair !important;
+                    background: transparent !important; border: none !important; color: #005500 !important; 
+                    font-family: 'Courier New' !important; font-size: 14px !important; margin: 0; padding: 0;
                 }
-                .stButton > button:hover { border: 1px solid #00FF00 !important; }
+                .stButton > button:hover { color: #00FF00 !important; cursor: help; }
                 </style>
                 """, unsafe_allow_html=True)
             
-            st.title("FATAL_EXCEPTION_0x00E44")
+            st.title("CRITICAL_MEMORY_CORRUPTION")
             st.write("---" * 20)
-            st.write("KERNEL_THREAD_PANIC: SECTOR_ZERO_OVERWRITE")
-            st.write("Dumping physical memory to disk...")
+            st.write("SYSTEM_HALT: STACK_OVERFLOW_DETECTED")
+            st.write("Current Memory Dumps (Interactive Debugger):")
             st.write("")
+
+            # Erstellung der Button-Matrix (Das Minenfeld)
+            col1, col2, col3, col4 = st.columns(4)
             
-            # GETARNTER RESET: Jetzt stabil in einer Spalte
-            col1, col2 = st.columns([1, 5])
             with col1:
-                # Wir nehmen eine feste Zahl für diesen Absturz-Zyklus
-                if st.button("0x88FF2"):
-                    self.recovery()
+                if st.button("0x0012"): st.toast("Memory Leak increased...") # Fake
             with col2:
-                st.write(" <-- ADDR_STK_RECOVERY")
-            
-            st.code("DEBUG_PTR: [C://SYSTEM/ROOT/SILAS_PROT.LOG]", language="bash")
+                if st.button("0xC119"): st.toast("Buffer Overflow...") # Fake
+            with col3:
+                # DAS IST DER ECHTE RESET-PUNKT
+                if st.button("0xAF32"): self.recovery() 
+            with col4:
+                if st.button("0x88FF"): st.toast("Access Denied.") # Fake
+
+            st.write("")
+            st.code(f"THREAD_ID: {random.randint(1000, 9999)} | PTR: 0xAF32 (RECOVERY_BIT_LOCKED)", language="bash")
+            st.write("Click on the specific memory register to attempt manual re-initialization.")
             return
 
-        # --- LOGIN ---
+        # --- LOGIN-SEQUENZ ---
         if st.session_state.auth_level == "A0":
             st.title("🛡️ SilasGuardian")
             ident = st.text_input("Ident-Key", type="password")
             pwd = st.text_input("Sektor-Passwort", type="password")
-            if st.button("Initialisieren"):
+            if st.button("Boot System"):
                 if ident.lower() == "silas" and pwd.lower() == "data":
                     st.session_state.auth_level = "A1+"; st.session_state.page = "dashboard"; st.rerun()
             return
@@ -72,9 +76,9 @@ class SilasGuardian:
             if c2.button("📂 Sektor 3"): st.session_state.page = "vault"; st.rerun()
             if c3.button("🛡️ Sektor Zero"): st.session_state.page = "honeypot"; st.rerun()
             st.divider()
-            if st.button("🚨 SHUTDOWN"): self.recovery()
+            if st.button("🚨 TOTAL SHUTDOWN"): self.recovery()
 
-        # --- SEKTOR 3 (VAULT) ---
+        # --- SEKTOR 3 ---
         elif st.session_state.page == "vault":
             st.title("📂 Sektor 3 - Vault")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
@@ -82,24 +86,21 @@ class SilasGuardian:
             if up:
                 with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
                 st.success("Datei gespeichert.")
-            
             for f in os.listdir(VAULT_PATH):
                 with open(os.path.join(VAULT_PATH, f), "rb") as fd:
                     st.download_button(f"🔓 {f}", data=fd, file_name=f, key=f)
 
-        # --- SEKTOR ZERO (HONEYPOT) ---
+        # --- SEKTOR ZERO ---
         elif st.session_state.page == "honeypot":
             st.title("🛡️ Sektor Zero")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            if st.toggle("NOTFALL-ABSTURZ AKTIVIEREN"):
-                st.session_state.crash = True
-                st.rerun()
+            if st.toggle("PANIC MODE AKTIVIEREN"):
+                st.session_state.crash = True; st.rerun()
 
         # --- SCANNER ---
         elif st.session_state.page == "scanner":
             st.title("📡 Scanner")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            st.write("Echtzeit-Analyse aktiv...")
-            # Hier kannst du deine Port-Scan Logik wieder einfügen
+            st.write("Schnittstellenprüfung läuft...")
 
 if __name__ == "__main__": SilasGuardian().render()
