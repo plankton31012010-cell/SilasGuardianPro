@@ -1,103 +1,80 @@
 import streamlit as st
-import os
-import time
-import datetime
-import pandas as pd
-import random
-
-# Versuche Plotly zu laden für die Weltkarte
+import os, time, datetime, random
 try:
     import plotly.express as px
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    PLOTLY_AVAILABLE = False
+    PLOTLY = True
+except:
+    PLOTLY = False
 
-# --- SYSTEM-SETUP ---
-VAULT_PATH = "sector_3_vault"
-LOG_FILE = os.path.join(VAULT_PATH, "intruder_log.txt")
-BRIDGE_FILE = os.path.join(VAULT_PATH, "bridge_logs.txt")
+st.set_page_config(page_title="SilasGuardian", layout="wide")
+VP = "sector_3_vault"
+LOG = os.path.join(VP, "log.txt")
+BR = os.path.join(VP, "bridge.txt")
+if not os.path.exists(VP): os.makedirs(VP)
+HOME = {"lat": 52.9126, "lon": 8.8217}
 
-if not os.path.exists(VAULT_PATH): 
-    os.makedirs(VAULT_PATH)
+if 'auth' not in st.session_state: st.session_state.update({'auth': "A0", 'time': None, 'scan': False, 'vault': False, 'crash': False})
 
-# Dein Standort: Syke, Deutschland
-HOME_BASE = {"City": "Syke", "lat": 52.9126, "lon": 8.8217}
+def reset():
+    st.session_state.update({'auth': "A0", 'time': None, 'scan': False, 'vault': False, 'crash': False})
+    st.rerun()
 
-class SilasGuardian:
-    def __init__(self):
-        if 'auth_level' not in st.session_state: st.session_state.auth_level = "A0"
-        if 'login_time' not in st.session_state: st.session_state.login_time = None
-        if 'scan_active' not in st.session_state: st.session_state.scan_active = False
-        if 'vault_destroyed' not in st.session_state: st.session_state.vault_destroyed = False
-        if 'crash' not in st.session_state: st.session_state.crash = False
-        if 'blackout' not in st.session_state: st.session_state.blackout = False
+st.markdown("<style>.stApp{background-color:#050505;color:#00ff41;font-family:monospace;}</style>", unsafe_allow_html=True)
 
-    def write_log(self, filename, message):
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(filename, "a") as f:
-            f.write(f"[{timestamp}] {message}\n")
+if st.session_state.crash:
+    st.title("☣️ CRASH")
+    if st.button("REBOOT"): reset()
+    st.stop()
 
-    def reset_system(self):
-        st.session_state.auth_level = "A0"
-        st.session_state.login_time = None
-        st.session_state.scan_active = False
-        st.session_state.vault_destroyed = False
-        st.session_state.crash = False
-        st.session_state.blackout = False
-        st.rerun()
+if st.session_state.auth == "A0":
+    st.title("🛡️ Login")
+    id_in = st.text_input("Ident", type="password")
+    pw_in = st.text_input("Sektor-Passwort", type="password")
+    if st.button("Boot"):
+        if id_in.lower() == "silas" and pw_in.lower() == "data":
+            st.session_state.auth = "A1+"
+            st.session_state.time = time.time()
+            st.rerun()
+    st.stop()
 
-    def render(self):
-        # --- CSS FÜR DEN CYBER-LOOK ---
-        st.markdown("""
-            <style>
-            .stApp { background-color: #050505; color: #00ff41; font-family: 'Courier New', monospace; }
-            .stTabs [data-baseweb="tab-list"] { background-color: #050505; border-bottom: 1px solid #004400; }
-            .stTabs [data-baseweb="tab"] { color: #00ff41 !important; }
-            .terminal-box { background-color: #001100; border: 1px solid #00ff41; padding: 10px; border-radius: 5px; font-size: 12px; }
-            .stProgress > div > div > div > div { background-image: linear-gradient(to right, #004400, #00ff41); box-shadow: 0 0 10px #00ff41; }
-            </style>
-            """, unsafe_allow_html=True)
+if (time.time() - st.session_state.time) < 3:
+    st.title("Willkommen Anton")
+    time.sleep(1); st.rerun()
 
-        # --- SICHERHEITS-LOGIK ---
-        if st.session_state.blackout:
-            st.markdown("<style>.main { background-color: #000 !important; }</style>", unsafe_allow_html=True)
-            if st.button(" ", key="hidden_reset"): self.reset_system()
-            return
+t1, t2, t3, t4 = st.tabs(["🌍 Map", "📡 Scan", "📂 Vault", "🛡️ Zero"])
 
-        if st.session_state.crash:
-            st.title("☣️ SYSTEM_HALTED")
-            cols = st.columns(4)
-            if cols[0].button("0x0B12"): self.write_log(LOG_FILE, "ALARM 0x0B12"); st.session_state.blackout = True; st.rerun()
-            if cols[1].button("0xC991"): self.write_log(LOG_FILE, "ALARM 0xC991"); st.session_state.blackout = True; st.rerun()
-            if cols[2].button("0xAF32"): self.reset_system()
-            if cols[3].button("0x82FF"): self.write_log(LOG_FILE, "ALARM 0x82FF"); st.session_state.blackout = True; st.rerun()
-            return
+with t1:
+    if PLOTLY:
+        d = []
+        for _ in range(10):
+            d.append({'lat':random.uniform(-30,60),'lon':random.uniform(-100,120),'Info':'THREAT','S':random.randint(10,30),'C':'G'})
+        d.append({'lat':HOME['lat'],'lon':HOME['lon'],'Info':'HOME (SYKE)','S':50,'C':'R'})
+        df = pd.DataFrame(d)
+        fig = px.scatter_geo(df,lat='lat',lon='lon',size='S',color='C',color_discrete_map={'G':'#00ff41','R':'#ff0000'})
+        fig.update_layout(template="plotly_dark", margin=dict(l=0,r=0,t=0,b=0), showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+    else: st.error("Lade Map...")
 
-        # --- LOGIN (A0) ---
-        if st.session_state.auth_level == "A0":
-            st.title("🛡️ SilasGuardian Login")
-            ident = st.text_input("Ident", type="password", key="l_id")
-            pwd = st.text_input("Sektor-Passwort", type="password", key="l_pw")
-            if st.button("Boot-Sequenz starten"):
-                if ident.lower() == "silas" and pwd.lower() == "data":
-                    st.session_state.auth_level = "A1+"
-                    st.session_state.login_time = time.time()
-                    st.rerun()
-                else:
-                    st.error("ZUGRIFF VERWEIGERT.")
-            return
+with t2:
+    if st.button("Start Scan"):
+        p = st.progress(0)
+        for i in range(100): time.sleep(0.01); p.progress(i+1)
+        st.session_state.scan = True
+    if st.session_state.scan: st.success("Netzwerk sicher.")
 
-        # --- INITIALISIERUNG ---
-        elapsed = time.time() - st.session_state.login_time
-        if elapsed < 5:
-            st.title("Willkommen Anton")
-            st.caption(f"Dechiffriere Sektoren... {5 - int(elapsed)}s")
-            time.sleep(1); st.rerun()
+with t3:
+    if st.session_state.vault:
+        st.error("VAULT PURGED")
+        if st.button("Restore"): st.session_state.vault = False; st.rerun()
+    else:
+        if st.button("🧨 SELBSTZERSTÖRUNG"): st.session_state.vault = True; st.rerun()
+        up = st.file_uploader("Upload")
+        if up: 
+            with open(os.path.join(VP, up.name),"wb") as f: f.write(up.getbuffer())
+        for fn in os.listdir(VP):
+            if fn not in ["log.txt", "bridge.txt"]:
+                with open(os.path.join(VP, fn), "rb") as fb: st.download_button(f"🔓 {fn}", fb, file_name=fn)
 
-        # --- TABS ---
-        tabs = st.tabs(["🌍 Threat-Map", "📡 Scanner", "📂 Sektor 3", "💬 Bridge", "🛡️ Sektor Zero"])
-
-        # 1. WELTKARTE (GRÜNE ANGRIFFE, ROTE HOMEBASE)
-        with tabs[0]:
-            if PLOTLY_AVAILABLE:
-                st.subheader("🌍 Live-Überwachung
+with t4:
+    if st.toggle("PANIC"): st.session_state.crash = True; st.rerun()
+    if st.button("OFF"): reset()
