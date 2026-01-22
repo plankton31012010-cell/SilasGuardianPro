@@ -13,52 +13,73 @@ class SilasGuardian:
         if 'auth_level' not in st.session_state: st.session_state.auth_level = "A0"
         if 'page' not in st.session_state: st.session_state.page = "login"
         if 'crash' not in st.session_state: st.session_state.crash = False
+        if 'blackout' not in st.session_state: st.session_state.blackout = False
 
     def recovery(self):
         st.session_state.crash = False
+        st.session_state.blackout = False
         st.session_state.auth_level = "A0"
         st.session_state.page = "login"
         st.rerun()
 
+    def trigger_blackout(self):
+        st.session_state.blackout = True
+        st.rerun()
+
     def render(self):
-        # --- DAS MINENFELD IM ABSTURZ ---
+        # --- PHASE 2: TOTALER BLACKOUT (DIE FALLE) ---
+        if st.session_state.blackout:
+            color = random.choice(["#FFFFFF", "#000000"])
+            st.markdown(f"""
+                <style>
+                .main {{ background-color: {color} !important; }}
+                * {{ color: {color} !important; cursor: none !important; }}
+                #MainMenu, footer, header {{visibility: hidden;}}
+                </style>
+                """, unsafe_allow_html=True)
+            # Versteckter Notfall-Reset (Klick irgendwo oben links reaktiviert es für dich)
+            if st.button(" ", key="emergency_reset"):
+                self.recovery()
+            return
+
+        # --- PHASE 1: DER GETARNTE ABSTURZ ---
         if st.session_state.crash:
             st.markdown("""
                 <style>
-                .main { background-color: #010a01 !important; color: #00FF00 !important; font-family: 'Courier New'; }
+                .main { background-color: #010501 !important; color: #00FF00 !important; font-family: 'Courier New'; }
                 .stButton > button { 
-                    background: transparent !important; border: none !important; color: #005500 !important; 
-                    font-family: 'Courier New' !important; font-size: 14px !important; margin: 0; padding: 0;
+                    background: transparent !important; border: none !important; 
+                    color: #008800 !important; font-family: 'Courier New' !important; 
+                    font-size: 14px !important; margin: 0; padding: 0; height: 20px;
                 }
-                .stButton > button:hover { color: #00FF00 !important; cursor: help; }
+                .stButton > button:hover { color: #00FF00 !important; border: none !important; }
+                .stButton > button:active { background: transparent !important; border: none !important; }
                 </style>
                 """, unsafe_allow_html=True)
             
-            st.title("CRITICAL_MEMORY_CORRUPTION")
+            st.title("FATAL_MEMORY_LEAK_DETECTION")
             st.write("---" * 20)
-            st.write("SYSTEM_HALT: STACK_OVERFLOW_DETECTED")
-            st.write("Current Memory Dumps (Interactive Debugger):")
-            st.write("")
-
-            # Erstellung der Button-Matrix (Das Minenfeld)
-            col1, col2, col3, col4 = st.columns(4)
+            st.write("CRITICAL: Stack smashing detected at Core_0. System paused.")
+            st.write("Local Registers:")
             
-            with col1:
-                if st.button("0x0012"): st.toast("Memory Leak increased...") # Fake
-            with col2:
-                if st.button("0xC119"): st.toast("Buffer Overflow...") # Fake
-            with col3:
-                # DAS IST DER ECHTE RESET-PUNKT
+            # Die Button-Matrix
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                if st.button("0x0B12"): self.trigger_blackout() # FALLE
+            with c2:
+                if st.button("0xC991"): self.trigger_blackout() # FALLE
+            with c3:
+                # ECHTER RESET (DEIN GEHEIMNIS)
                 if st.button("0xAF32"): self.recovery() 
-            with col4:
-                if st.button("0x88FF"): st.toast("Access Denied.") # Fake
+            with c4:
+                if st.button("0x82FF"): self.trigger_blackout() # FALLE
 
             st.write("")
-            st.code(f"THREAD_ID: {random.randint(1000, 9999)} | PTR: 0xAF32 (RECOVERY_BIT_LOCKED)", language="bash")
-            st.write("Click on the specific memory register to attempt manual re-initialization.")
+            st.code("LOG: Attempting to dump register 0xAF32... [FAILED]", language="bash")
+            st.write("System locked. Hardware reboot required.")
             return
 
-        # --- LOGIN-SEQUENZ ---
+        # --- NORMALER LOGIN ---
         if st.session_state.auth_level == "A0":
             st.title("🛡️ SilasGuardian")
             ident = st.text_input("Ident-Key", type="password")
@@ -78,7 +99,7 @@ class SilasGuardian:
             st.divider()
             if st.button("🚨 TOTAL SHUTDOWN"): self.recovery()
 
-        # --- SEKTOR 3 ---
+        # --- SEKTOR 3 (VAULT) ---
         elif st.session_state.page == "vault":
             st.title("📂 Sektor 3 - Vault")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
@@ -90,17 +111,17 @@ class SilasGuardian:
                 with open(os.path.join(VAULT_PATH, f), "rb") as fd:
                     st.download_button(f"🔓 {f}", data=fd, file_name=f, key=f)
 
-        # --- SEKTOR ZERO ---
+        # --- SEKTOR ZERO (HONEYPOT) ---
         elif st.session_state.page == "honeypot":
             st.title("🛡️ Sektor Zero")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            if st.toggle("PANIC MODE AKTIVIEREN"):
+            if st.toggle("ACTIVATE PANIC MODE"):
                 st.session_state.crash = True; st.rerun()
 
         # --- SCANNER ---
         elif st.session_state.page == "scanner":
             st.title("📡 Scanner")
             if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
-            st.write("Schnittstellenprüfung läuft...")
+            st.write("Integritätsprüfung aktiv...")
 
 if __name__ == "__main__": SilasGuardian().render()
