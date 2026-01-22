@@ -38,10 +38,12 @@ class SilasGuardian:
             f.write(f"[{timestamp}] {message}\n")
 
     def reset_system(self):
-        st.session_state.update({
-            "auth_level": "A0", "login_time": None, "scan_active": False,
-            "vault_destroyed": False, "crash": False, "blackout": False
-        })
+        st.session_state.auth_level = "A0"
+        st.session_state.login_time = None
+        st.session_state.scan_active = False
+        st.session_state.vault_destroyed = False
+        st.session_state.crash = False
+        st.session_state.blackout = False
         st.rerun()
 
     def render(self):
@@ -98,24 +100,4 @@ class SilasGuardian:
         # 1. WELTKARTE (GRÜNE ANGRIFFE, ROTE HOMEBASE)
         with tabs[0]:
             if PLOTLY_AVAILABLE:
-                st.subheader("🌍 Live-Überwachung: Globale Bedrohungen")
-                threats = []
-                # Zufällige Angriffe (Grün)
-                for _ in range(12):
-                    threats.append({
-                        'lat': random.uniform(-35, 65), 'lon': random.uniform(-110, 140),
-                        'Info': f"IP: {random.randint(1,255)}.{random.randint(1,255)}.x.x",
-                        'Typ': random.choice(['Brute Force', 'DDoS', 'Port Scan']),
-                        'Größe': random.randint(10, 40), 'Farbe': 'Grün'
-                    })
-                # Dein Heimatpunkt (Rot)
-                threats.append({
-                    'lat': HOME_BASE['lat'], 'lon': HOME_BASE['lon'],
-                    'Info': 'HOME BASE (Syke)', 'Typ': 'CORE_PROTECTION',
-                    'Größe': 50, 'Farbe': 'Rot'
-                })
-                
-                df_map = pd.DataFrame(threats)
-                fig = px.scatter_geo(df_map, lat='lat', lon='lon', size='Größe',
-                                     hover_name='Info', hover_data={'Typ': True, 'Größe': False, 'lat': False, 'lon': False},
-                                     color='Farbe', color_discrete_map={'Grün': '#00ff41', 'Rot': '#
+                st.subheader("🌍 Live-Überwachung
