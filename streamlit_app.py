@@ -5,7 +5,7 @@ import datetime
 import pandas as pd
 import random
 
-# Versuche Plotly zu laden, falls es fehlt, gibt es eine Warnung statt eines Absturzes
+# Versuche Plotly zu laden für die Weltkarte
 try:
     import plotly.express as px
     PLOTLY_AVAILABLE = True
@@ -20,7 +20,7 @@ BRIDGE_FILE = os.path.join(VAULT_PATH, "bridge_logs.txt")
 if not os.path.exists(VAULT_PATH): 
     os.makedirs(VAULT_PATH)
 
-# Standort-Daten für Syke
+# Dein Standort: Syke, Deutschland
 HOME_BASE = {"City": "Syke", "lat": 52.9126, "lon": 8.8217}
 
 class SilasGuardian:
@@ -38,26 +38,25 @@ class SilasGuardian:
             f.write(f"[{timestamp}] {message}\n")
 
     def reset_system(self):
-        st.session_state.auth_level = "A0"
-        st.session_state.login_time = None
-        st.session_state.scan_active = False
-        st.session_state.vault_destroyed = False
-        st.session_state.crash = False
-        st.session_state.blackout = False
+        st.session_state.update({
+            "auth_level": "A0", "login_time": None, "scan_active": False,
+            "vault_destroyed": False, "crash": False, "blackout": False
+        })
         st.rerun()
 
     def render(self):
-        # --- CSS ---
+        # --- CSS FÜR DEN CYBER-LOOK ---
         st.markdown("""
             <style>
             .stApp { background-color: #050505; color: #00ff41; font-family: 'Courier New', monospace; }
-            .stTabs [data-baseweb="tab-list"] { background-color: #050505; }
+            .stTabs [data-baseweb="tab-list"] { background-color: #050505; border-bottom: 1px solid #004400; }
             .stTabs [data-baseweb="tab"] { color: #00ff41 !important; }
-            .terminal-box { background-color: #001100; border: 1px solid #00ff41; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 12px; }
+            .terminal-box { background-color: #001100; border: 1px solid #00ff41; padding: 10px; border-radius: 5px; font-size: 12px; }
+            .stProgress > div > div > div > div { background-image: linear-gradient(to right, #004400, #00ff41); box-shadow: 0 0 10px #00ff41; }
             </style>
             """, unsafe_allow_html=True)
 
-        # --- SICHERHEITSEBENEN ---
+        # --- SICHERHEITS-LOGIK ---
         if st.session_state.blackout:
             st.markdown("<style>.main { background-color: #000 !important; }</style>", unsafe_allow_html=True)
             if st.button(" ", key="hidden_reset"): self.reset_system()
@@ -66,18 +65,18 @@ class SilasGuardian:
         if st.session_state.crash:
             st.title("☣️ SYSTEM_HALTED")
             cols = st.columns(4)
-            if cols[0].button("0x0B12"): self.write_log(LOG_FILE, "Falle: 0x0B12"); st.session_state.blackout = True; st.rerun()
-            if cols[1].button("0xC991"): self.write_log(LOG_FILE, "Falle: 0xC991"); st.session_state.blackout = True; st.rerun()
+            if cols[0].button("0x0B12"): self.write_log(LOG_FILE, "ALARM 0x0B12"); st.session_state.blackout = True; st.rerun()
+            if cols[1].button("0xC991"): self.write_log(LOG_FILE, "ALARM 0xC991"); st.session_state.blackout = True; st.rerun()
             if cols[2].button("0xAF32"): self.reset_system()
-            if cols[3].button("0x82FF"): self.write_log(LOG_FILE, "Falle: 0x82FF"); st.session_state.blackout = True; st.rerun()
+            if cols[3].button("0x82FF"): self.write_log(LOG_FILE, "ALARM 0x82FF"); st.session_state.blackout = True; st.rerun()
             return
 
-        # --- LOGIN ---
+        # --- LOGIN (A0) ---
         if st.session_state.auth_level == "A0":
             st.title("🛡️ SilasGuardian Login")
             ident = st.text_input("Ident", type="password", key="l_id")
             pwd = st.text_input("Sektor-Passwort", type="password", key="l_pw")
-            if st.button("Boot"):
+            if st.button("Boot-Sequenz starten"):
                 if ident.lower() == "silas" and pwd.lower() == "data":
                     st.session_state.auth_level = "A1+"
                     st.session_state.login_time = time.time()
@@ -86,69 +85,37 @@ class SilasGuardian:
                     st.error("ZUGRIFF VERWEIGERT.")
             return
 
-        # --- TIMER ---
+        # --- INITIALISIERUNG ---
         elapsed = time.time() - st.session_state.login_time
         if elapsed < 5:
             st.title("Willkommen Anton")
-            st.caption(f"Lade System-Kern... {5 - int(elapsed)}s")
+            st.caption(f"Dechiffriere Sektoren... {5 - int(elapsed)}s")
             time.sleep(1); st.rerun()
 
-        # --- DASHBOARD ---
+        # --- TABS ---
         tabs = st.tabs(["🌍 Threat-Map", "📡 Scanner", "📂 Sektor 3", "💬 Bridge", "🛡️ Sektor Zero"])
 
-        with tabs[0]: # Weltkarte
+        # 1. WELTKARTE (GRÜNE ANGRIFFE, ROTE HOMEBASE)
+        with tabs[0]:
             if PLOTLY_AVAILABLE:
-                attacks = []
-                for _ in range(7):
-                    attacks.append({'lat': random.uniform(-30, 60), 'lon': random.uniform(-100, 120), 'Type': 'Threat', 'Color': 'Red'})
-                attacks.append({'lat': HOME_BASE['lat'], 'lon': HOME_BASE['lon'], 'Type': 'HOME BASE (Syke)', 'Color': 'Blue'})
-                df_map = pd.DataFrame(attacks)
-                fig = px.scatter_geo(df_map, lat='lat', lon='lon', hover_name='Type', color='Color',
-                                     color_discrete_map={'Red': '#ff0000', 'Blue': '#008cff'},
-                                     projection="natural earth")
-                fig.update_layout(template="plotly_dark", margin=dict(l=0, r=0, t=0, b=0), showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.error("Weltkarten-Modul lädt noch... Bitte 'requirements.txt' prüfen.")
-
-        with tabs[1]: # Scanner
-            if st.button("Deep Scan starten"):
-                st.session_state.scan_active = False
-                p = st.progress(0)
-                l = st.empty()
-                for i in range(100):
-                    time.sleep(0.01)
-                    p.progress(i + 1)
-                    l.markdown(f"<div class='terminal-box'>> ANALYZING... {i+1}%</div>", unsafe_allow_html=True)
-                st.session_state.scan_active = True
-                st.rerun()
-            if st.session_state.get('scan_active'):
-                st.table(pd.DataFrame([{"IP": "192.168.1.1", "Device": "Gateway (FritzBox)"}]))
-
-        with tabs[2]: # Vault
-            if st.session_state.vault_destroyed:
-                st.error("VAULT EMPTY")
-                if st.button("Restore"): st.session_state.vault_destroyed = False; st.rerun()
-            else:
-                if st.button("🧨 SELBSTZERSTÖRUNG"): st.session_state.vault_destroyed = True; st.rerun()
-                st.divider()
-                for f_name in os.listdir(VAULT_PATH):
-                    if f_name not in ["intruder_log.txt", "bridge_logs.txt"]:
-                        with open(os.path.join(VAULT_PATH, f_name), "rb") as fb:
-                            st.download_button(f"🔓 {f_name}", fb, file_name=f_name, key=f_name)
-
-        with tabs[3]: # Bridge
-            m = st.text_input("Message...")
-            if st.button("Send"):
-                self.write_log(BRIDGE_FILE, f"Anton: {m}")
-                st.rerun()
-            if os.path.exists(BRIDGE_FILE):
-                with open(BRIDGE_FILE, "r") as f:
-                    for line in reversed(f.readlines()): st.code(line.strip())
-
-        with tabs[4]: # Zero
-            if st.toggle("PANIC MODE"): st.session_state.crash = True; st.rerun()
-            if st.button("🚨 Shutdown"): self.reset_system()
-
-if __name__ == "__main__":
-    SilasGuardian().render()
+                st.subheader("🌍 Live-Überwachung: Globale Bedrohungen")
+                threats = []
+                # Zufällige Angriffe (Grün)
+                for _ in range(12):
+                    threats.append({
+                        'lat': random.uniform(-35, 65), 'lon': random.uniform(-110, 140),
+                        'Info': f"IP: {random.randint(1,255)}.{random.randint(1,255)}.x.x",
+                        'Typ': random.choice(['Brute Force', 'DDoS', 'Port Scan']),
+                        'Größe': random.randint(10, 40), 'Farbe': 'Grün'
+                    })
+                # Dein Heimatpunkt (Rot)
+                threats.append({
+                    'lat': HOME_BASE['lat'], 'lon': HOME_BASE['lon'],
+                    'Info': 'HOME BASE (Syke)', 'Typ': 'CORE_PROTECTION',
+                    'Größe': 50, 'Farbe': 'Rot'
+                })
+                
+                df_map = pd.DataFrame(threats)
+                fig = px.scatter_geo(df_map, lat='lat', lon='lon', size='Größe',
+                                     hover_name='Info', hover_data={'Typ': True, 'Größe': False, 'lat': False, 'lon': False},
+                                     color='Farbe', color_discrete_map={'Grün': '#00ff41', 'Rot': '#
