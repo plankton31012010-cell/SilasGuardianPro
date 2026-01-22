@@ -2,101 +2,107 @@ import streamlit as st
 import os
 import time
 import random
-import socket
 
 # --- SYSTEM-SETUP ---
 st.set_page_config(page_title="SilasGuardian", page_icon="🛡️", layout="wide")
 VAULT_PATH = "sector_3_vault"
-if not os.path.exists(VAULT_PATH):
-    os.makedirs(VAULT_PATH)
+if not os.path.exists(VAULT_PATH): os.makedirs(VAULT_PATH)
 
 class SilasGuardian:
     def __init__(self):
         if 'auth_level' not in st.session_state: st.session_state.auth_level = "A0"
         if 'page' not in st.session_state: st.session_state.page = "login"
-        if 'system_crash' not in st.session_state: st.session_state.system_crash = False
+        if 'crash' not in st.session_state: st.session_state.crash = False
 
-    def trigger_reset(self):
-        st.session_state.system_crash = False
+    def recovery(self):
+        st.session_state.crash = False
         st.session_state.auth_level = "A0"
         st.session_state.page = "login"
         st.rerun()
 
     def render(self):
-        # --- DER SPEKTAKULÄRE ABSTURZ (SEKTOR ZERO) ---
-        if st.session_state.system_crash:
+        # --- DER ULTIMATIVE GETARNTE ABSTURZ ---
+        if st.session_state.crash:
             st.markdown("""
                 <style>
-                @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
-                .main { background-color: #050000 !important; color: #ff3333 !important; animation: shake 0.5s infinite; }
-                .hidden-btn { background: none; border: none; color: #ff3333; text-decoration: underline; cursor: pointer; font-family: 'Courier New'; padding: 0; font-size: 16px; }
+                @keyframes crt { 0% { opacity: 0.9; } 50% { opacity: 1; } 100% { opacity: 0.9; } }
+                .main { background-color: #020000 !important; color: #00FF00 !important; font-family: 'Courier New'; animation: crt 0.1s infinite; }
+                .stButton > button { 
+                    background: transparent !important; border: none !important; color: #00FF00 !important; 
+                    font-family: 'Courier New' !important; font-size: 14px !important; padding: 0 !important; 
+                    margin: 0 !important; height: auto !important; width: auto !important; cursor: default !important;
+                }
+                .stButton > button:active { background: transparent !important; color: #00FF00 !important; }
                 </style>
                 """, unsafe_allow_html=True)
             
-            st.title("☣️ CRITICAL_CORE_CORRUPTION_DETECTED")
-            st.error("EMERGENCY LOCKDOWN INITIATED")
-            st.write("---" * 15)
-            st.write("Memory at segment ALPHA-7 is bleeding into Sektor Zero.")
-            st.write("All data in Sektor 3 is being overwritten with zeros.")
+            st.title("FATAL_EXCEPTION_0x00E44")
+            st.write("A critical error has occurred and the system has been halted to prevent data loss.")
+            st.write("---" * 20)
+            st.write("KERNEL_THREAD_PANIC: SECTOR_ZERO_OVERWRITE")
+            st.write("Dumping physical memory to disk: 100%")
+            st.write("Contact your system administrator if this problem persists.")
+            st.write("")
             
-            # Der getarnte Reset-Link
-            st.write("To attempt a recovery of the kernel, the user must:")
-            if st.button("reset the power supply", key="secret_reset"):
-                self.trigger_reset()
+            # GETARNTER RESET: Er sieht aus wie eine technische Zeile
+            col1, col2 = st.columns([1, 10])
+            with col1:
+                # Nur dieser kleine Teil ist der Button!
+                if st.button(f"0x{random.randint(4000, 9999)}A"):
+                    self.recovery()
+            with col2:
+                st.write("  <-- STACK_ADDR_RECOVERY_POINT")
             
-            st.code(f"ERROR_CODE: 0x00000{random.randint(100,999)}FF", language="bash")
+            st.code(f"REGISTER_DUMP: EAX={random.getrandbits(32)} EBX={random.getrandbits(32)}", language="bash")
             return
 
-        # --- NORMALER LOGIN ---
+        # --- LOGIN ---
         if st.session_state.auth_level == "A0":
-            st.title("🛡️ SilasGuardian | BOOT_SEQUENCE")
+            st.title("🛡️ SilasGuardian")
             ident = st.text_input("Ident-Key", type="password")
             pwd = st.text_input("Sektor-Passwort", type="password")
-            if st.button("Starten"):
+            if st.button("Initialisieren"):
                 if ident.lower() == "silas" and pwd.lower() == "data":
                     st.session_state.auth_level = "A1+"; st.session_state.page = "dashboard"; st.rerun()
             return
 
-        # --- DASHBOARD ---
+        # --- DASHBOARD (ANTON) ---
         if st.session_state.page == "dashboard":
             st.title("Hallo Anton")
+            st.subheader("Systemstatus: A1+ Vollzugriff")
             c1, c2, c3 = st.columns(3)
             if c1.button("📡 Scanner"): st.session_state.page = "scanner"; st.rerun()
             if c2.button("📂 Sektor 3"): st.session_state.page = "vault"; st.rerun()
             if c3.button("🛡️ Sektor Zero"): st.session_state.page = "honeypot"; st.rerun()
-            if st.button("🚨 SHUTDOWN"): self.trigger_reset()
-
-        # --- SCANNER ---
-        elif st.session_state.page == "scanner":
-            st.title("📡 Netzwerk-Integrität")
-            if st.button("← Zurück"): st.session_state.page = "dashboard"; st.rerun()
-            if st.button("Scan starten"):
-                with st.spinner("Scanne lokale Schnittstellen..."):
-                    time.sleep(1)
-                    st.success("Schnittstelle 127.0.0.1 aktiv. Keine externen Eindringlinge gefunden.")
+            st.divider()
+            if st.button("🚨 SHUTDOWN"): self.recovery()
 
         # --- SEKTOR 3 (VAULT) ---
         elif st.session_state.page == "vault":
             st.title("📂 Sektor 3 - Vault")
-            if st.button("← Zurück"): st.session_state.page = "dashboard"; st.rerun()
+            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
             up = st.file_uploader("Datei sichern")
             if up:
-                with open(os.path.join(VAULT_PATH, up.name), "wb") as f:
-                    f.write(up.getbuffer())
-                st.success("Datei physikalisch gespeichert.")
-            
-            st.write("### Archivierte Daten:")
+                with open(os.path.join(VAULT_PATH, up.name), "wb") as f: f.write(up.getbuffer())
+                st.success("Datei gespeichert.")
             for f in os.listdir(VAULT_PATH):
-                with open(os.path.join(VAULT_PATH, f), "rb") as file_data:
-                    st.download_button(f"📄 {f} extrahieren", data=file_data, file_name=f)
+                with open(os.path.join(VAULT_PATH, f), "rb") as fd:
+                    st.download_button(f"🔓 {f}", data=fd, file_name=f, key=f)
 
-        # --- SEKTOR ZERO ---
+        # --- SEKTOR ZERO (HONEYPOT) ---
         elif st.session_state.page == "honeypot":
             st.title("🛡️ Sektor Zero")
-            if st.button("← Zurück"): st.session_state.page = "dashboard"; st.rerun()
-            if st.toggle("ACTIVATE EMERGENCY SELF-DESTRUCT"):
-                st.session_state.system_crash = True
+            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
+            if st.toggle("NOTFALL-ABSTURZ AKTIVIEREN"):
+                st.session_state.crash = True
                 st.rerun()
 
-if __name__ == "__main__":
-    SilasGuardian().render()
+        # --- SCANNER ---
+        elif st.session_state.page == "scanner":
+            st.title("📡 Scanner")
+            if st.button("← Dashboard"): st.session_state.page = "dashboard"; st.rerun()
+            st.write("Scan läuft...")
+            time.sleep(1)
+            st.success("Netzwerk sauber.")
+
+if __name__ == "__main__": SilasGuardian().render()
